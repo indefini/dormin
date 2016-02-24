@@ -1,0 +1,49 @@
+[package]
+name = "dormin"
+version = "0.1.0"
+authors = ["indefini <chris@indefini.org>"]
+
+[dependencies.png]
+#git = "https://github.com/servo/rust-png.git"
+#rev = "da851d68159fe0a7dba81dfbee594e5226b72884"
+#git = "https://github.com/sebcrozet/rust-png.git"
+#git = "https://github.com/drasich/rust-png.git"
+#git = "https://github.com/bfops/rust-png.git"
+git = "https://github.com/indefini/rust-png.git"
+#path = "/home/chris/code/indefini/rust-png"
+
+#[dependencies.cypher]
+#git = "https://github.com/drasich/cypher.git"
+[dependencies.cypher-sys]
+git = "https://github.com/drasich/cypher.git"
+#path = "/home/chris/code/cypher/"
+features = ["evas"]
+
+[dependencies.toml]
+git = "https://github.com/alexcrichton/toml-rs"
+
+[dependencies.uuid]
+git = "https://github.com/rust-lang/uuid.git"
+#git = "https://github.com/drasich/uuid.git"
+
+[dependencies.rustc-serialize]
+git = "https://github.com/indefini/rustc-serialize.git"
+
+#[dependencies.hlua]
+#git = "https://github.com/indefini/hlua.git"
+
+[dependencies.lua]
+#git = "https://github.com/kballard/rust-lua.git"
+git = "https://github.com/indefini/rust-lua.git"
+
+[dependencies]
+#rustc-serialize = "0.3.14"
+#toml = "0.1"
+byteorder = "*"
+lazy_static = "0.1.*"
+#hlua = "0.1"
+libc = "*"
+#clippy = "*"
+
+
+
