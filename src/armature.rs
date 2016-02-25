@@ -276,7 +276,7 @@ impl Curve
 }
 
 #[derive(Clone)]
-struct Action
+pub struct Action
 {
     name : String,
     curves : Vec<Curve>,

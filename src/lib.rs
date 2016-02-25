@@ -54,33 +54,33 @@ mod test {
 }
 
 #[macro_use]
-mod property;
+pub mod property;
 
 pub mod resource;
-mod shader;
-mod material;
-mod armature;
-mod mesh;
+pub mod shader;
+pub mod material;
+pub mod armature;
+pub mod mesh;
 //mod mesh_render;
 pub mod render;
-mod object;
-mod uniform;
-mod matrix;
-mod vec;
-mod camera;
+pub mod object;
+pub mod uniform;
+pub mod matrix;
+pub mod vec;
+pub mod camera;
 pub mod scene;
-mod texture;
-mod geometry;
-mod intersection;
-mod fbo;
+pub mod texture;
+pub mod geometry;
+pub mod intersection;
+pub mod fbo;
 pub mod factory;
 
-mod transform;
+pub mod transform;
 
-mod model;
+pub mod model;
 
-mod component;
-use component::manager;
+pub mod component;
+pub use component::manager;
 
 mod util;
 
