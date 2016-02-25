@@ -15,8 +15,8 @@ git = "https://github.com/indefini/rust-png.git"
 #[dependencies.cypher]
 #git = "https://github.com/drasich/cypher.git"
 [dependencies.cypher-sys]
-#git = "https://github.com/drasich/cypher.git"
-path = "/home/chris/code/cypher/"
+git = "https://github.com/drasich/cypher.git"
+#path = "/home/chris/code/cypher/"
 #features = ["evas"]
 
 [dependencies.toml]
