@@ -218,6 +218,8 @@ impl Shader
         let vertcp = vertc.as_ptr();
         let fragcp = fragc.as_ptr();
 
+        println!("shader::: begin to init : {}", self.name);
+
         unsafe {
             let shader = cgl_shader_init_string(vertcp, fragcp);
             self.cgl_shader = Some(shader);

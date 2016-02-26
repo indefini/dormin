@@ -38,6 +38,10 @@ extern {
     pub fn cgl_draw_end() -> ();
 
     pub fn cgl_clear() -> ();
+
+    pub fn cypher_init_simple();
+    pub fn cypher_draw_start(w : i32, h : i32);
+    pub fn cypher_draw_end();
 }
 
 /*
