@@ -23,7 +23,7 @@ extern {
 
 pub struct Texture
 {
-    name : String,
+    pub name : String,
     pub state : i32,
     //state : i32,
     image : Option<png::Image>,
@@ -56,9 +56,11 @@ impl Texture
         //let result = png::load_png(&Path::new(self.name.as_str()));
         let path : &Path = self.name.as_ref();
         let result = png::load_png(path);
-        
+
         match result {
-            Err(_) => {},
+            Err(_) => {
+                println!(".... loading texture {:?} : ERROR", path);
+            },
             Ok(img) => {
                 self.image = Some(img);
                 self.state = 1;
@@ -80,7 +82,7 @@ impl Texture
                      //png::RGB8(ref pixels) => pixels.as_ptr(),
                      png::PixelsByColorType::RGBA8(ref pixels) =>  { 
                          for i in 0usize..8 { 
-                             println!("{}RGBA{} : {}", self.name, i, pixels[i]);
+                             println!("{}, RGBA{} : {}", self.name, i, pixels[i]);
                          }
                          pixels.as_ptr()
                      },

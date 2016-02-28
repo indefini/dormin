@@ -142,7 +142,7 @@ impl TextureSend for texture::Texture {
     fn uniform_send(&self, uni : *const shader::CglShaderUniform, index : u32) ->()
     {
         match self.cgl_texture {
-            None => {},
+            None => {println!("no cgl texture...............................")},
             Some(t) => unsafe {
                 cgl_shader_uniform_texture_set(uni, t, index);
             }

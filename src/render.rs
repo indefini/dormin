@@ -1033,7 +1033,9 @@ fn object_init_mat(
                         shader.texture_set(name.as_ref(), & *yoyo.read().unwrap(),i);
                         i = i +1;
                     },
-                    None => {}
+                    None => {
+                        println!("there is NONONO tex........ {}", name);
+                    }
                 }
             },
             material::Sampler::Fbo(ref mut fbo, ref attachment) => {
@@ -1060,7 +1062,6 @@ fn object_init_mat(
     for (k,v) in material.uniforms.iter() {
         shader.uniform_set(k.as_ref(), &(**v));
     }
-
 }
 
 fn object_init_mesh(
