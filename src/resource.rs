@@ -116,6 +116,20 @@ impl <T:'static+Create+Send+Sync> ResTT<T>
         }
     }
 
+    pub fn load_instant_no_manager(&mut self)
+    {
+        match self.resource {
+            ResNone | ResWait => {
+                let mut mt : T = Create::create(self.name.as_ref());
+                mt.inittt();
+                let data = Arc::new(RwLock::new(mt));
+                self.resource = ResTest::ResData(data);
+            },
+            _ => {}
+        }
+    }
+
+
     pub fn get_resource_instant(&mut self, manager : &mut ResourceManager<T> ) -> Arc<RwLock<T>>
     {
         match self.resource {
@@ -400,7 +414,6 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 }
-
 
 //#[deriving(Decodable, Encodable)]
 /*
