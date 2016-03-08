@@ -16,7 +16,7 @@ use material;
 use property::{PropertyRead, PropertyGet, PropertyWrite, WriteValue};
 use std::any::Any;
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Clone, Default)]
 pub struct MeshRender
 {
     pub mesh : String,

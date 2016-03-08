@@ -255,9 +255,52 @@ impl CompData
         }
 
     }
+
+    pub fn get_all_kind() -> String
+    {
+        let mut s = "".to_string();
+            $(
+                s.push_str(stringify!($member));
+                s.push_str("/");
+             )+
+
+        if !s.is_empty() {
+            s.pop();
+        }
+        
+        s
+    }
 }
 
 impl PropertyWrite for CompData {
+
+  fn test_set_property(&mut self, value: &Any)
+  {
+      match value.downcast_ref::<CompData>() {
+          Some(v) => {
+              *self = v.clone();
+              return;
+          }
+          None => {}
+      }
+
+      match value.downcast_ref::<String>() {
+          Some(s) => {
+              match s.as_ref() {
+                  $(
+                      stringify!($member) => {
+                          let c = $member::default();
+                          *self = CompData::$member(c);
+                      },
+                      )+
+                  _ => println!("no such type")
+              }
+          },
+          None => {}
+      }
+  }
+
+
   fn test_set_property_hier(&mut self, name : &str, value: &Any)
   {
       println!("compdata TEST set property hier: {}", name);

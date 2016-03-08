@@ -332,11 +332,10 @@ impl Action {
     }
 }
 
-#[derive(Clone, RustcEncodable, RustcDecodable)]
+#[derive(Clone, RustcEncodable, RustcDecodable, Default)]
 pub struct ArmaturePath {
    pub name : String
 }
-
 
 //TODO clone : only have one instance of the base armature
 // and have ArmatureInstance for the variation
