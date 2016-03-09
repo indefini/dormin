@@ -270,12 +270,27 @@ impl CompData
         
         s
     }
+
+    pub fn new(name : &str) -> CompData
+    {
+        match name {
+            $(
+                stringify!($member) =>  {
+                    let c = $member::default();
+                    CompData::$member(c)
+                }
+             )+
+            _ => CompData::None
+        }
+
+    }
 }
 
 impl PropertyWrite for CompData {
 
   fn test_set_property(&mut self, value: &Any)
   {
+      println!("compdata TEST set property !!!!");
       match value.downcast_ref::<CompData>() {
           Some(v) => {
               *self = v.clone();
@@ -283,6 +298,15 @@ impl PropertyWrite for CompData {
           }
           None => {}
       }
+
+      match value.downcast_ref::<Box<CompData>>() {
+          Some(v) => {
+              *self = (**v).clone();
+              return;
+          }
+          None => {}
+      }
+
 
       match value.downcast_ref::<String>() {
           Some(s) => {
