@@ -277,7 +277,7 @@ impl Scene
                 }
             }
             if not_found {
-            println!("dit not found the id, adding {}", o.read().unwrap().name);
+            println!("did not found the id, adding {}", o.read().unwrap().name);
             list.push_back(o.clone());
             }
         }

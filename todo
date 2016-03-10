@@ -1,0 +1,91 @@
+remove linkedlist
+
+make new tree for scene
+- must be able to :
+  from the point of view of the object :
+    get world position of an object (easily), needs a ref to the scene?
+    access the other objects (=the scene) while manipulating object...
+    can do it with as_mut_slice().split_mut_at()
+    if we want get_objects_around_2meters() or get_enemies_who_are_awake() etc... we can do :
+      let objs = scene.objects.as_mut_slice().iter_mut().filter(|x| x.is_around(blabla)).collect<Vec<_>());
+
+  scene/graph/tree transformation : (ref to scene is ok)
+    add children
+    change/remove parent
+    
+
+
+idea :
+
+1)
+struct Node
+{
+  parent : i32, // parent node : scene.layer_pos[layer-1][parent]
+  layer : i32(starts with 0),
+  object : Object,
+  childs : Vec<i32>
+}
+
+struct Layer
+{
+  objs : Vec<Node>
+  free_index : Vec<i32>
+}
+
+
+// a scene start with a 0 layer
+// objects added start with 0 layer, adding a child means adding a layer 1 and adding objects to this layer.
+struct Scene
+{
+  layers_pos : Vec<Layer>
+  layers_neg : Vec<Layer>
+}
+
+minus : needs a ref to the scene to remove/add child to objects
+
+2)
+
+struct Node<'a>
+{
+  parent : &'a Node,
+  object : Object,
+  childs : Vec<Node>
+}
+
+3)
+
+struct Node
+{
+  parent : Rc<RefCell<Node>>
+  object : Object,
+  childs : Vec<Rc<RefCell<Node>>>
+}
+
+4)
+
+objects, parents, and child have the same size
+struct Scene
+{
+  objects : Vec<Object>, 
+  parents : Vec<int>,
+  childs : Vec<Vec<usize>
+
+  free_index : Vec<i32>
+}
+
+almost same as :
+
+struct Scene
+{
+  objects : Vec<Object>, 
+  free_index : Vec<i32>
+}
+
+struct Object 
+{
+  parent : usize,
+  child : Vec<usize>
+
+}
+
+
