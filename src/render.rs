@@ -67,7 +67,7 @@ pub extern fn resize_cb(r : *mut Render, w : c_int, h : c_int) -> () {
 struct CameraPass
 {
     camera : Rc<RefCell<camera::Camera>>,
-    objects : LinkedList<Arc<RwLock<object::Object>>>,
+    objects : Vec<Arc<RwLock<object::Object>>>,
 }
 
 impl CameraPass
@@ -76,13 +76,13 @@ impl CameraPass
     {
         CameraPass {
             camera : camera,
-            objects : LinkedList::new()
+            objects : Vec::new()
         }
     }
 
     fn add_object(&mut self, o : Arc<RwLock<object::Object>>)
     {
-        self.objects.push_back(o);
+        self.objects.push(o);
     }
 }
 
@@ -400,7 +400,7 @@ impl Render {
             */
     }
 
-    fn prepare_passes(&mut self, objects : &LinkedList<Arc<RwLock<object::Object>>>)
+    fn prepare_passes(&mut self, objects : &[Arc<RwLock<object::Object>>])
     {
         for (_,p) in self.passes.iter_mut()
         {
@@ -485,7 +485,7 @@ impl Render {
 
     fn prepare_passes_selected(
         &mut self,
-        objects : &LinkedList<Arc<RwLock<object::Object>>>)
+        objects : &[Arc<RwLock<object::Object>>])
     {
         for (_,p) in self.passes.iter_mut()
         {
@@ -494,7 +494,7 @@ impl Render {
 
         let mut center = vec::Vec3::zero();
         let mut ori = vec::Quat::identity();
-        for o in objects.iter() {
+        for o in objects {
             center = center + o.read().unwrap().position;
             ori = ori * o.read().unwrap().world_orientation();
             prepare_passes_object(
@@ -525,7 +525,7 @@ impl Render {
         }
     }
 
-    fn prepare_passes_objects_per(&mut self, list : &LinkedList<Arc<RwLock<object::Object>>>)
+    fn prepare_passes_objects_per(&mut self, list : &[Arc<RwLock<object::Object>>])
     {
         for (_,p) in self.passes.iter_mut()
         {
@@ -533,7 +533,7 @@ impl Render {
             p.passes.clear();
         }
 
-        for o in list.iter() {
+        for o in list {
 
         prepare_passes_object(
             o.clone(),
@@ -546,9 +546,9 @@ impl Render {
 
     pub fn draw(
         &mut self,
-        objects : &LinkedList<Arc<RwLock<object::Object>>>,
-        selected : &LinkedList<Arc<RwLock<object::Object>>>,
-        draggers : &LinkedList<Arc<RwLock<object::Object>>>,
+        objects : &[Arc<RwLock<object::Object>>],
+        selected : &[Arc<RwLock<object::Object>>],
+        draggers : &[Arc<RwLock<object::Object>>],
         ) -> ()
     {
         self.prepare_passes_selected(selected);
@@ -959,7 +959,7 @@ impl GameRender {
 
     fn prepare_passes_objects_per(
         &mut self,
-        list : &LinkedList<Arc<RwLock<object::Object>>>)
+        list : &[Arc<RwLock<object::Object>>])
     {
         for (_,p) in self.passes.iter_mut()
         {
@@ -978,7 +978,7 @@ impl GameRender {
 
     pub fn draw(
         &mut self,
-        objects : &LinkedList<Arc<RwLock<object::Object>>>,
+        objects : &[Arc<RwLock<object::Object>>],
         ) -> ()
     {
         self.prepare_passes_objects_per(objects);

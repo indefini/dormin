@@ -50,7 +50,7 @@ impl Factory {
             orientation : transform::Orientation::new_quat(),
             //angles : vec::Vec3::zero(),
             scale : vec::Vec3::one(),
-            children : LinkedList::new(),
+            children : Vec::new(),
             parent : None,
             //transform : box transform::Transform::new()
             components : Vec::new(),
@@ -76,19 +76,14 @@ impl Factory {
 
     pub fn create_scene(&self, name : &str) -> scene::Scene
     {
-        scene::Scene {
-            name : String::from(name),
-            id : self.create_id(),
-            objects : LinkedList::new(),
-            camera : Some(Rc::new(RefCell::new(self.create_camera())))
-        }
+        scene::Scene::new(name, self.create_id(), self.create_camera())
     }
 
     pub fn copy_object(&self, o : &object::Object) -> object::Object
     {
-        let mut children_copy = LinkedList::new();
+        let mut children_copy = Vec::with_capacity(o.children.len());
         for c in &o.children {
-            children_copy.push_back(Arc::new(RwLock::new(self.copy_object(&*c.read().unwrap()))));
+            children_copy.push(Arc::new(RwLock::new(self.copy_object(&*c.read().unwrap()))));
         }
 
         //TODO clone children, components, comp_data, comp_string...

@@ -42,7 +42,7 @@ pub struct Object
     pub position : vec::Vec3,
     pub orientation : transform::Orientation,
     pub scale : vec::Vec3,
-    pub children : LinkedList<Arc<RwLock<Object>>>,
+    pub children : Vec<Arc<RwLock<Object>>>,
     //pub children : LinkedList<ThreadObject>,
     pub parent : Option<Arc<RwLock<Object>>>,
     //pub transform : Box<transform::Transform>
@@ -477,7 +477,7 @@ impl Object
 
 pub fn child_add(parent : Arc<RwLock<Object>>, child : Arc<RwLock<Object>>)
 {
-    parent.write().unwrap().children.push_back(child.clone());
+    parent.write().unwrap().children.push(child.clone());
     child.write().unwrap().parent = Some(parent.clone());
 }
 

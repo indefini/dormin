@@ -19,8 +19,9 @@ pub struct Scene
 {
     pub name : String,
     pub id : Uuid,
-    pub objects : LinkedList<Arc<RwLock<object::Object>>>,
-    pub camera : Option<Rc<RefCell<camera::Camera>>>
+    pub camera : Option<Rc<RefCell<camera::Camera>>>,
+
+    pub objects : Vec<Arc<RwLock<object::Object>>>,
 }
 
 pub struct SceneRom
@@ -33,15 +34,15 @@ pub struct SceneRom
 
 impl Scene
 {
-    /*
-    pub fn new(name : &str) -> Scene
+    pub fn new(name : &str, id : Uuid, cam : camera::Camera) -> Scene
     {
         Scene {
-            name : String::from_str(name),
-            objects : LinkedList::new(),
+            name : String::from(name),
+            id : id,
+            objects : Vec::new(),
+            camera : Some(Rc::new(RefCell::new(cam)))
         }
     }
-    */
 
     pub fn new_from_file(file_path : &str, resource :&resource::ResourceGroup) -> Scene
     {
@@ -180,7 +181,7 @@ impl Scene
 
     pub fn find_object_by_id(&self, id : &Uuid) -> Option<Arc<RwLock<object::Object>>>
     {
-        fn find(list : &LinkedList<Arc<RwLock<object::Object>>>, id : &Uuid) ->
+        fn find(list : &[Arc<RwLock<object::Object>>], id : &Uuid) ->
             Option<Arc<RwLock<object::Object>>>
             {
                 for o in list.iter()
@@ -200,13 +201,13 @@ impl Scene
         find(&self.objects, id)
     }
 
-    pub fn find_objects_by_id(&self, ids : &mut Vec<Uuid>) -> LinkedList<Arc<RwLock<object::Object>>>
+    pub fn find_objects_by_id(&self, ids : &mut Vec<Uuid>) -> Vec<Arc<RwLock<object::Object>>>
     {
-        let mut return_list = LinkedList::new();
+        let mut return_list = Vec::new();
         fn find(
-            list : &LinkedList<Arc<RwLock<object::Object>>>,
+            list : &[Arc<RwLock<object::Object>>],
             ids : &mut Vec<Uuid>,
-            return_list : &mut LinkedList<Arc<RwLock<object::Object>>>
+            return_list : &mut Vec<Arc<RwLock<object::Object>>>
             )
             {
                 for o in list.iter()
@@ -215,7 +216,7 @@ impl Scene
                     for i in 0..ids.len() {
                         if o.read().unwrap().id == ids[i] {
                             ids.remove(i);
-                            return_list.push_back(o.clone());
+                            return_list.push(o.clone());
                             found = true;
                             break;
                         }
@@ -230,59 +231,42 @@ impl Scene
         return_list
     }
 
-    pub fn add_objects(&mut self, obs : &LinkedList<Arc<RwLock<object::Object>>>)
+    pub fn add_objects(&mut self, obs : &[Arc<RwLock<object::Object>>])
     {
-        self.objects.append(&mut obs.clone());
+        self.objects.extend_from_slice(obs);
     }
 
-    pub fn add_objects_by_vec(&mut self, obs : Vec<Arc<RwLock<object::Object>>>)
+    pub fn add_objects_by_vec(&mut self, obs : &mut Vec<Arc<RwLock<object::Object>>>)
     {
-        //TODO vec to list
-        for o in obs.iter() {
-            self.objects.push_back(o.clone());
-        }
+        self.objects.append(obs);
     }
 
-    pub fn remove_objects(&mut self, obs : &LinkedList<Arc<RwLock<object::Object>>>)
+    pub fn remove_objects(&mut self, obs : &[Arc<RwLock<object::Object>>])
     {
-        let mut list = LinkedList::new();
-        for o in self.objects.iter() {
-            let mut not_found = true;
+        let mut to_remove = Vec::new();
+
+        let mut obs = obs.to_vec();
+
+        for (i,o) in self.objects.iter().enumerate() {
+
+            let mut j = 0;
             for r in obs.iter() {
                 if o.read().unwrap().id == r.read().unwrap().id {
                     println!("found the id, break {}", o.read().unwrap().name);
-                    not_found = false;
+                    to_remove.push(i);
                     break;
                 }
+                j = j + 1;
             }
-            if not_found {
-            println!("dit not found the id, adding {}", o.read().unwrap().name);
-            list.push_back(o.clone());
+            if j < obs.len() {
+                obs.swap_remove(j);
             }
         }
 
-        self.objects = list;
-    }
-
-    pub fn remove_objects_by_vec(&mut self, obs : Vec<Arc<RwLock<object::Object>>>)
-    {
-        let mut list = LinkedList::new();
-        for o in self.objects.iter() {
-            let mut not_found = true;
-            for r in obs.iter() {
-                if o.read().unwrap().id == r.read().unwrap().id {
-                    println!("found the id, break {}", o.read().unwrap().name);
-                    not_found = false;
-                    break;
-                }
-            }
-            if not_found {
-            println!("did not found the id, adding {}", o.read().unwrap().name);
-            list.push_back(o.clone());
-            }
+        for r in &to_remove {
+            //TODO change parent and child
+            self.objects.swap_remove(*r);
         }
-
-        self.objects = list;
     }
 
     pub fn savetoml(&self)

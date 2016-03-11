@@ -12,6 +12,7 @@ make new tree for scene
   scene/graph/tree transformation : (ref to scene is ok)
     add children
     change/remove parent
+    add full node with children
     
 
 
@@ -20,7 +21,7 @@ idea :
 1)
 struct Node
 {
-  parent : i32, // parent node : scene.layer_pos[layer-1][parent]
+  parent : usize, // parent node : scene.layer_pos[layer-1][parent]
   layer : i32(starts with 0),
   object : Object,
   childs : Vec<i32>
@@ -88,4 +89,45 @@ struct Object
 
 }
 
+or again : 
+
+struct Scene
+{
+  nodes : Vec<Node>, 
+  free_index : Vec<i32>
+}
+
+struct Node
+{
+  object : Object
+  parent : Option<usize>,
+  child : Vec<usize>
+
+}
+
+
+5) looks like 1, but a node own his children
+
+struct Node
+{
+  parent : usize, // parent node : scene.layer_pos[layer-1][parent]
+  layer : i32(starts with 0),
+  object : Object,
+  childs : Vec<Node>
+}
+
+struct Layer
+{
+  objs : Vec<Node>
+  free_index : Vec<i32>
+}
+
+
+// a scene start with a 0 layer
+// objects added start with 0 layer, adding a child means adding a layer 1 and adding objects to this layer.
+struct Scene
+{
+  layers_pos : Vec<Layer>
+  layers_neg : Vec<Layer>
+}
 

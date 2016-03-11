@@ -1,11 +1,8 @@
 #![feature(box_syntax)]
-#![feature(core)]
-#![feature(convert)]
 #![feature(step_by)]
 #![feature(zero_one)]
 
 #![feature(vec_push_all)]
-#![feature(borrow_state)]
 
 //TODO remove
 #![allow(unused_variables)]
