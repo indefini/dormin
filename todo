@@ -108,26 +108,46 @@ struct Node
 
 5) looks like 1, but a node own his children
 
-struct Node
+struct Object
 {
   parent : usize, // parent node : scene.layer_pos[layer-1][parent]
   layer : i32(starts with 0),
-  object : Object,
-  childs : Vec<Node>
+  childs : Vec<Object> 
 }
-
-struct Layer
-{
-  objs : Vec<Node>
-  free_index : Vec<i32>
-}
-
 
 // a scene start with a 0 layer
 // objects added start with 0 layer, adding a child means adding a layer 1 and adding objects to this layer.
 struct Scene
 {
-  layers_pos : Vec<Layer>
-  layers_neg : Vec<Layer>
+  layers_pos : Vec<Object>
+  layers_neg : Vec<Object>
+}
+
+6) same as 5 but child are in the layers
+struct Object
+{
+  parent : usize, // parent node : scene.layer_pos[layer-1][parent]
+  layer : i32(starts with 0),
+  childs : Vec<usize> 
+}
+
+// a scene start with a 0 layer
+// objects added start with 0 layer, adding a child means adding a layer 1 and adding objects to this layer.
+struct Scene
+{
+  layers_pos : Vec<Object>
+  layers_neg : Vec<Object>
+}
+
+7)
+struct Object
+{
+  parent : usize, 
+  childs : Vec<usize> 
+}
+
+struct Scene
+{
+  Object : Vec<Object>
 }
 
