@@ -292,6 +292,39 @@ impl Scene
 
     pub fn remove_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
     {
+        let pvec = self.find_objects_by_id_or_none(&mut parents.to_vec());
+
+        fn remove(
+            list : &mut Vec<Arc<RwLock<object::Object>>>,
+            id : Uuid
+            )
+            {
+                let mut index = None;
+                for (j,o) in list.iter().enumerate() {
+                    if o.read().unwrap().id == id {
+                        index = Some(j);
+                        break;
+                    }
+                }
+
+                if let Some(idx) = index {
+                    list.swap_remove(idx);
+                }
+            }
+
+
+        for (i,p) in pvec.iter().enumerate() {
+            let rem_id = obs[i].read().unwrap().id;
+
+            let list = if let Some(ref par) = *p {
+                remove(&mut par.write().unwrap().children, rem_id);
+            }
+            else {
+                remove(&mut self.objects, rem_id);
+            };
+        }
+
+        /*
         let mut to_remove = Vec::new();
 
         let mut obs = obs.to_vec();
@@ -316,6 +349,7 @@ impl Scene
             //TODO change parent and child
             self.objects.swap_remove(*r);
         }
+        */
     }
 
     pub fn savetoml(&self)
