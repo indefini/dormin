@@ -198,7 +198,12 @@ impl Scene
                 None
             }
 
-        find(&self.objects, id)
+        if id.is_nil() {
+            None
+        }
+        else {
+            find(&self.objects, id)
+        }
     }
 
     pub fn find_objects_by_id(&self, ids : &mut Vec<Uuid>) -> Vec<Arc<RwLock<object::Object>>>
@@ -231,9 +236,53 @@ impl Scene
         return_list
     }
 
-    pub fn add_objects(&mut self, obs : &[Arc<RwLock<object::Object>>])
+    pub fn find_objects_by_id_or_none(&self, ids : &mut Vec<Uuid>) -> 
+        Vec<Option<Arc<RwLock<object::Object>>>>
     {
-        self.objects.extend_from_slice(obs);
+        let mut return_list = Vec::new();
+        fn find(
+            list : &[Arc<RwLock<object::Object>>],
+            ids : &mut Vec<Uuid>,
+            return_list : &mut Vec<Option<Arc<RwLock<object::Object>>>>
+            )
+            {
+                for o in list.iter()
+                {
+                    let mut found = false;
+                    for i in 0..ids.len() {
+                        if ids[i].is_nil() {
+                            return_list.push(None);
+                        }
+                        else if o.read().unwrap().id == ids[i] {
+                            ids.remove(i);
+                            return_list.push(Some(o.clone()));
+                            found = true;
+                            break;
+                        }
+                    }
+                    if !found {
+                        find(&o.read().unwrap().children, ids, return_list);
+                    }
+                }
+            }
+
+        find(&self.objects, ids, &mut return_list);
+        return_list
+    }
+
+
+    pub fn add_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
+    {
+        let pvec = self.find_objects_by_id_or_none(&mut parents.to_vec());
+
+        for (i,p) in pvec.iter().enumerate() {
+            if let Some(ref par) = *p {
+                par.write().unwrap().children.push(obs[i].clone());
+            }
+            else {
+                self.objects.push(obs[i].clone());
+            }
+        }
     }
 
     pub fn add_objects_by_vec(&mut self, obs : &mut Vec<Arc<RwLock<object::Object>>>)
@@ -241,7 +290,7 @@ impl Scene
         self.objects.append(obs);
     }
 
-    pub fn remove_objects(&mut self, obs : &[Arc<RwLock<object::Object>>])
+    pub fn remove_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
     {
         let mut to_remove = Vec::new();
 
