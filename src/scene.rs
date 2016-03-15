@@ -236,44 +236,26 @@ impl Scene
         return_list
     }
 
-    pub fn find_objects_by_id_or_none(&self, ids : &mut Vec<Uuid>) -> 
+    pub fn find_objects_by_id_or_none(&self, ids : &[Uuid]) -> 
         Vec<Option<Arc<RwLock<object::Object>>>>
     {
         let mut return_list = Vec::new();
-        fn find(
-            list : &[Arc<RwLock<object::Object>>],
-            ids : &mut Vec<Uuid>,
-            return_list : &mut Vec<Option<Arc<RwLock<object::Object>>>>
-            )
-            {
-                for o in list.iter()
-                {
-                    let mut found = false;
-                    for i in 0..ids.len() {
-                        if ids[i].is_nil() {
-                            return_list.push(None);
-                        }
-                        else if o.read().unwrap().id == ids[i] {
-                            ids.remove(i);
-                            return_list.push(Some(o.clone()));
-                            found = true;
-                            break;
-                        }
-                    }
-                    if !found {
-                        find(&o.read().unwrap().children, ids, return_list);
-                    }
-                }
+        for i in ids {
+            if i.is_nil() {
+                return_list.push(None);
             }
+            else {
+                return_list.push(self.find_object_by_id(i));
+            }
+        }
 
-        find(&self.objects, ids, &mut return_list);
         return_list
     }
 
 
     pub fn add_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
     {
-        let pvec = self.find_objects_by_id_or_none(&mut parents.to_vec());
+        let pvec = self.find_objects_by_id_or_none(parents);
 
         for (i,p) in pvec.iter().enumerate() {
             if let Some(ref par) = *p {
@@ -292,7 +274,7 @@ impl Scene
 
     pub fn remove_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
     {
-        let pvec = self.find_objects_by_id_or_none(&mut parents.to_vec());
+        let pvec = self.find_objects_by_id_or_none(parents);
 
         fn remove(
             list : &mut Vec<Arc<RwLock<object::Object>>>,
@@ -311,7 +293,6 @@ impl Scene
                     list.swap_remove(idx);
                 }
             }
-
 
         for (i,p) in pvec.iter().enumerate() {
             let rem_id = obs[i].read().unwrap().id;
