@@ -316,7 +316,7 @@ impl Scene
         for (i,p) in pvec.iter().enumerate() {
             let rem_id = obs[i].read().unwrap().id;
 
-            let list = if let Some(ref par) = *p {
+            if let Some(ref par) = *p {
                 remove(&mut par.write().unwrap().children, rem_id);
             }
             else {
