@@ -2,14 +2,16 @@ use std::collections::HashMap;
 use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::fs::File;
 use std::io::{BufReader, BufRead, Read};
-use libc::{c_char, c_uint};
+use libc::{c_char, c_uint, c_void};
 use std::ptr;
 use std::str::FromStr;
 use std::ffi::CString;
 use std::path::Path;
+use std::mem;
 //use std::default::Default;
 //use toml;
 
+use util;
 use vec;
 use resource;
 use uniform::UniformSend;
@@ -39,8 +41,28 @@ pub struct Shader
 unsafe impl Send for Shader {}
 unsafe impl Sync for Shader {}
 
+extern fn shader_uniform_add(
+    data : *const c_void,
+    name : *const c_char,
+    cgl_uni : *const CglShaderUniform)
+{
+    let uniforms : &mut HashMap<String, *const CglShaderUniform> = unsafe {mem::transmute(data) };
+    uniforms.insert(util::c_char_to_string(name), cgl_uni);
+}
+
+extern fn shader_attribute_add(
+    data : *const c_void,
+    name : *const c_char,
+    cgl_att : *const CglShaderAttribute)
+{
+    let attributes : &mut HashMap<String, *const CglShaderAttribute> = unsafe {mem::transmute(data) };
+    attributes.insert(util::c_char_to_string(name), cgl_att);
+}
+
+
 impl Shader
 {
+    /*
     fn attribute_add(&mut self, name : &str, size : u32)
     {
         let attc = CString::new(name.as_bytes()).unwrap();
@@ -73,6 +95,7 @@ impl Shader
                 }
         }
     }
+    */
 
     pub fn uniform_set(&self, name : &str, value : &UniformSend)
     {
@@ -141,6 +164,7 @@ impl Shader
         //TODO remove from here
         self.cgl_init();
 
+                /*
         for line in file.lines() {
             let l = line.unwrap();
             let split : Vec<&str> = l.split(',').collect();
@@ -168,6 +192,18 @@ impl Shader
                 }
             }
         }
+                */
+
+        unsafe { cgl_shader_attributes_init(
+                self.cgl_shader.unwrap(),
+                shader_attribute_add,
+                mem::transmute(&mut self.attributes)); }
+
+        unsafe { cgl_shader_uniforms_init(
+                self.cgl_shader.unwrap(),
+                shader_uniform_add,
+                mem::transmute(&mut self.uniforms)); }
+
 
         self.state = 2;
     }
@@ -261,6 +297,16 @@ impl UniformSend for UniformData
     }
 }
 
+type ShaderUniformAddFn = extern fn(
+    data : *const c_void,
+    name : *const c_char,
+    cgl_uni : *const CglShaderUniform);
+
+type ShaderAttributeAddFn = extern fn(
+    data : *const c_void,
+    name : *const c_char,
+    cgl_att : *const CglShaderAttribute);
+
 #[link(name = "cypher")]
 extern {
     fn cgl_shader_init_string(
@@ -269,6 +315,7 @@ extern {
 
     pub fn cgl_shader_use(shader : *const CglShader);
 
+    /*
     pub fn cgl_shader_attribute_new(
         shader : *const CglShader,
         name : *const c_char,
@@ -277,6 +324,17 @@ extern {
     pub fn cgl_shader_uniform_new(
         shader : *const CglShader,
         name : *const c_char) -> *const CglShaderUniform;
+        */
+
+    fn cgl_shader_attributes_init(
+        shader : *const CglShader, 
+        cb : ShaderAttributeAddFn,
+        data : *const c_void);
+
+    fn cgl_shader_uniforms_init(
+        shader : *const CglShader, 
+        cb : ShaderUniformAddFn,
+        data : *const c_void);
 
 }
 

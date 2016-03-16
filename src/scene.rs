@@ -1,4 +1,3 @@
-use std::collections::{LinkedList};
 use std::sync::{RwLock, Arc};
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -374,10 +373,8 @@ impl Decodable for Scene {
           name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
           id: try!(decoder.read_struct_field("id", 0, |decoder| Decodable::decode(decoder))),
          //id : Uuid::new_v4(),
-          //objects: LinkedList::new(),
           objects: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
           //tests: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
-          //tests: LinkedList::new()
           //camera : None //try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
           camera : try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
           //camera : None

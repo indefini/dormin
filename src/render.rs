@@ -1,4 +1,3 @@
-use std::collections::{LinkedList};
 use std::rc::Rc;
 use std::cell::RefCell;
 use libc::{c_uint, c_int};
@@ -91,7 +90,6 @@ struct RenderPass
     pub name : String,
     //pub material : Arc<sync::RwLock<material::Material>>,
     pub shader : Arc<sync::RwLock<shader::Shader>>,
-    //pub objects : LinkedList<Arc<RwLock<object::Object>>>,
     //pub camera : Rc<RefCell<camera::Camera>>,
     pub passes : HashMap<uuid::Uuid, Box<CameraPass>>,
 }
@@ -105,7 +103,6 @@ impl RenderPass
         RenderPass {
                   name : String::from("passtest"),
                   shader : shader.clone(),
-                  //objects : LinkedList::new(),
                   //camera : camera,
                   passes : HashMap::new()
               }
@@ -506,7 +503,7 @@ impl Render {
         }
     }
 
-    fn prepare_passes_objects_ortho(&mut self, list : LinkedList<Arc<RwLock<object::Object>>>)
+    fn prepare_passes_objects_ortho(&mut self, list : &[Arc<RwLock<object::Object>>])
     {
         for (_,p) in self.passes.iter_mut()
         {
@@ -514,14 +511,13 @@ impl Render {
             p.passes.clear();
         }
 
-        for o in list.iter() {
-
-        prepare_passes_object(
-            o.clone(),
-            &mut self.passes,
-            &mut self.resource.material_manager.borrow_mut(),
-            &mut self.resource.shader_manager.borrow_mut(),
-            self.camera_ortho.clone());
+        for o in list {
+            prepare_passes_object(
+                o.clone(),
+                &mut self.passes,
+                &mut self.resource.material_manager.borrow_mut(),
+                &mut self.resource.shader_manager.borrow_mut(),
+                self.camera_ortho.clone());
         }
     }
 
@@ -534,13 +530,12 @@ impl Render {
         }
 
         for o in list {
-
-        prepare_passes_object(
-            o.clone(),
-            &mut self.passes,
-            &mut self.resource.material_manager.borrow_mut(),
-            &mut self.resource.shader_manager.borrow_mut(),
-            self.camera.clone());
+            prepare_passes_object(
+                o.clone(),
+                &mut self.passes,
+                &mut self.resource.material_manager.borrow_mut(),
+                &mut self.resource.shader_manager.borrow_mut(),
+                self.camera.clone());
         }
     }
 
@@ -587,9 +582,9 @@ impl Render {
 
 
         //*
-        let mut l = LinkedList::new();
-        l.push_back(self.quad_all.clone());
-        self.prepare_passes_objects_ortho(l);
+        let mut l = Vec::new();
+        l.push(self.quad_all.clone());
+        self.prepare_passes_objects_ortho(&l);
 
         for p in self.passes.values()
         {
@@ -602,9 +597,9 @@ impl Render {
         let sel_len = selected.len();
 
         if sel_len > 0 {
-            let mut l = LinkedList::new();
-            l.push_back(self.quad_outline.clone());
-            self.prepare_passes_objects_ortho(l);
+            let mut l = Vec::new();
+            l.push(self.quad_outline.clone());
+            self.prepare_passes_objects_ortho(&l);
 
             for p in self.passes.values()
             {
@@ -615,7 +610,6 @@ impl Render {
 
             //* TODO dragger
             unsafe { cgl_clear(); }
-            //let mut ld = LinkedList::new();
             //ld.push_back(self.dragger.clone());
             //self.prepare_passes_objects_per(ld);
             self.prepare_passes_objects_per(draggers);
@@ -805,66 +799,6 @@ fn create_repere(m : &mut mesh::Mesh, len : f64)
     m.add_line(s, blue);
 }
 
-
-/*
-fn add_box_only_first_object(
-    line : &mut object::Object, 
-    objects : &LinkedList<Arc<RwLock<object::Object>>>, 
-    scale : f64
-    )
-{
-    let mut m = if let Some(ref mr) = line.mesh_render {
-        if let resource::ResTest::ResData(ref mesh_arc) = mr.mesh.resource {
-            mesh_arc.write().unwrap()
-        }
-        else  {
-            return;
-        }
-    }
-    else {
-        return;
-    };
-
-    let color = vec::Vec4::new(0f64,1f64,0f64,0.7f64);
-
-    m.clear_lines();
-
-    for o in objects.iter() {
-        let ob = o.read().unwrap();
-        line.position = ob.world_position();
-        line.orientation = transform::Orientation::Quat(ob.world_orientation());
-        //line.scale = ob.world_scale();
-        //line.scale = vec::Vec3::new(scale,scale,scale);
-
-        let obm = if let Some(ref mr) = ob.mesh_render {
-            if let resource::ResTest::ResData(ref mesh_arc) = mr.mesh.resource {
-                mesh_arc.read().unwrap()
-            }
-            else  {
-                break;
-            }
-        }
-        else {
-            break;
-        };
-
-        let aabox = if let Some(ref m) = obm.aabox {
-            m
-        }
-        else {
-            break;
-        };
-
-        let scaled_box = aabox * scale;
-
-        m.add_aabox(&scaled_box, color);
-
-        break;
-    }
-}
-*/
-
-
 pub struct GameRender
 {
     passes : HashMap<String, Box<RenderPass>>, //TODO check
@@ -937,25 +871,6 @@ impl GameRender {
         //let mut cam_ortho = self.camera_ortho.borrow_mut();
         //cam_ortho.set_resolution(w, h);
     }
-
-    /*
-    fn prepare_passes_objects_ortho(&mut self, list : LinkedList<Arc<RwLock<object::Object>>>)
-    {
-        for (_,p) in self.passes.iter_mut()
-        {
-            p.passes.clear();
-        }
-
-        for o in list.iter() {
-            prepare_passes_object(
-                o.clone(),
-                &mut self.passes,
-                self.material_manager.clone(),
-                self.shader_manager.clone(),
-                self.camera_ortho.clone());
-        }
-    }
-    */
 
     fn prepare_passes_objects_per(
         &mut self,

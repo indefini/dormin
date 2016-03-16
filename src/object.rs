@@ -9,7 +9,6 @@ use component::{Component,CompData, Components};
 use component::mesh_render;
 use mesh;
 
-use std::collections::{LinkedList};
 use std::sync::{RwLock, Arc};//,RWLockReadGuard};
 use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::collections::hash_map::Entry::{Occupied,Vacant};
@@ -43,7 +42,6 @@ pub struct Object
     pub orientation : transform::Orientation,
     pub scale : vec::Vec3,
     pub children : Vec<Arc<RwLock<Object>>>,
-    //pub children : LinkedList<ThreadObject>,
     pub parent : Option<Arc<RwLock<Object>>>,
     //pub transform : Box<transform::Transform>
     pub components : Vec<Box<Components>>,
@@ -76,7 +74,6 @@ pub struct ObjectRom
 pub struct ObjectInstance
 {
     pub mesh_render : Option<mesh_render::MeshRenderer>,
-    //pub children : LinkedList<Arc<RwLock<ObjectInstance>>>,
     pub parent : Option<Arc<RwLock<ObjectRom>>>,
     pub components : Rc<RefCell<Vec<Rc<RefCell<Box<Component>>>>>>,
 }
@@ -103,7 +100,7 @@ impl Clone for Object {
             position : self.position.clone(),
             orientation : self.orientation.clone(),
             scale : self.scale.clone(),
-            children : self.children.clone(), //LinkedList::new(),
+            children : self.children.clone(), 
             parent : self.parent.clone(), //None,
             //transform : box transform::Transform::new()
             components : components,
@@ -127,7 +124,7 @@ impl Object
             orientation : vec::Quat::identity(),
             //angles : vec::Vec3::zero(),
             scale : vec::Vec3::one(),
-            children : LinkedList::new(),
+            children : Vec::new(),
             parent : None
         }
     }
@@ -493,7 +490,6 @@ impl Decodable for Object {
           orientation: try!(decoder.read_struct_field("orientation", 0, |decoder| Decodable::decode(decoder))),
           scale: try!(decoder.read_struct_field("scale", 0, |decoder| Decodable::decode(decoder))),
           children: try!(decoder.read_struct_field("children", 0, |decoder| Decodable::decode(decoder))),
-          //children : LinkedList::new(),
           //parent: try!(decoder.read_struct_field("children", 0, |decoder| Decodable::decode(decoder))),
           parent: None,
           //transform : box transform::Transform::new()
@@ -545,7 +541,7 @@ impl Clone for Object
             orientation : vec::Quat::identity(),
             //angles : vec::Vec3::zero(),
             scale : vec::Vec3::one(),
-            children : LinkedList::new(),
+            children : Vec::new(),
             parent : None
         }
 
