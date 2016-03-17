@@ -32,6 +32,9 @@ pub struct Shader
     pub uniforms : HashMap<String, *const CglShaderUniform>,
     pub state : i32,
 
+    pub vert_path : Option<String>,
+    pub frag_path : Option<String>,
+
     vert : Option<String>,
     frag : Option<String>,
 
@@ -133,6 +136,8 @@ impl Shader
             cgl_shader : None,
             attributes : HashMap::new(),
             uniforms : HashMap::new(),
+            vert_path : None,
+            frag_path : None,
             vert : None,
             frag : None,
             state : 0
@@ -160,39 +165,11 @@ impl Shader
         }
 
         self.read_vert_frag(vert.as_ref(), frag.as_ref());
+        self.vert_path = Some(vert);
+        self.frag_path = Some(frag);
 
         //TODO remove from here
         self.cgl_init();
-
-                /*
-        for line in file.lines() {
-            let l = line.unwrap();
-            let split : Vec<&str> = l.split(',').collect();
-            if split[0] == "att" {
-                let size : u32;
-                /*let op : Option<u32> = FromStr::from_str(split[2]);
-                match op {
-                    Some(u) => size = u,
-                    None => continue
-                }
-                */
-                let op = FromStr::from_str(split[2]);
-                match op {
-                    Ok(u) => size = u,
-                    _ => continue
-                }
-                println!("it's an attribute {}, {}", split[1], size);
-                self.attribute_add(split[1], size);
-            }
-            else if split[0] == "uni" {
-                self.uniform_add(split[1]);
-                println!("it's an uniform {} yoo", split[1]);
-                if split[2] == "vec4" {
-                    //TODO
-                }
-            }
-        }
-                */
 
         unsafe { cgl_shader_attributes_init(
                 self.cgl_shader.unwrap(),
@@ -264,7 +241,45 @@ impl Shader
         self.state = 3;
     }
 
+    pub fn reload(&mut self)
+    {
+        println!("RELOAD");
 
+        let vert = if let Some(ref vert) = self.vert_path {
+            vert.clone()
+        }
+        else {
+            println!("reload early return");
+            return;
+        };
+
+        let frag = if let Some(ref frag) = self.frag_path {
+            frag.clone()
+        }
+        else {
+            println!("reload early return2");
+            return;
+        };
+        
+        
+        self.read_vert_frag(&vert, &frag);
+        self.state = 1;
+    }
+
+    pub fn load_gl(&mut self)
+    {
+        self.cgl_init();
+
+        unsafe { cgl_shader_attributes_init(
+                self.cgl_shader.unwrap(),
+                shader_attribute_add,
+                mem::transmute(&mut self.attributes)); }
+
+        unsafe { cgl_shader_uniforms_init(
+                self.cgl_shader.unwrap(),
+                shader_uniform_add,
+                mem::transmute(&mut self.uniforms)); }
+    }
 }
 
 
@@ -358,6 +373,8 @@ impl Decodable for Shader {
              uniforms : HashMap::new(),
              vert : None,
              frag : None,
+             vert_path : None,
+             frag_path : None,
              state : 0
         })
     })

@@ -118,6 +118,9 @@ impl RenderPass
         if shader.state == 0 {
             shader.read();
         }
+        else if shader.state == 1 {
+            shader.load_gl();
+        }
 
         shader.utilise();
 
