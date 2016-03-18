@@ -11,6 +11,7 @@ use resource;
 
 use property::{PropertyRead, PropertyGet, PropertyWrite, WriteValue};
 use std::any::Any;
+use input;
 
 #[derive(Clone, RustcEncodable, RustcDecodable,Default)]
 pub struct Player
@@ -47,7 +48,7 @@ impl Component for PlayerBehavior
     */
 
     //fn update(&mut self, dt : f64) {}
-    fn update(&mut self, ob : &mut Object, dt : f64)
+    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input)
     {
         let speed = {
             match ob.get_mut_comp_data::<Player>(){
@@ -56,7 +57,18 @@ impl Component for PlayerBehavior
             }
         };
 
-        println!("update player");
+        if input.is_key_down(26) {
+            ob.position.z = ob.position.z + 5f64;
+        }
+        if input.is_key_down(39) {
+            ob.position.x = ob.position.x - 5f64;
+        }
+        else if input.is_key_down(40) {
+            ob.position.z = ob.position.z - 5f64;
+        }
+        else if input.is_key_down(41) {
+            ob.position.x = ob.position.x + 5f64;
+        }
 
         //let yep = ob.get_mut_comp_data::<Player>();
 

@@ -78,6 +78,7 @@ mod component;
 use component::manager;
 
 mod util;
+mod input;
 
 
 static mut sTest : i32 = 5;

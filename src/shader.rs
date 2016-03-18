@@ -244,6 +244,7 @@ impl Shader
     pub fn reload(&mut self)
     {
         println!("RELOAD");
+        println!("TODO free resource of old shader");
 
         let vert = if let Some(ref vert) = self.vert_path {
             vert.clone()

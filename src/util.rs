@@ -2,7 +2,6 @@ use std::sync::{RwLock, Arc};
 use std::fs;
 use std::mem;
 
-
 use vec;
 use object;
 
@@ -63,4 +62,17 @@ pub fn c_char_to_string(c : *const c_char) -> String
 {
     String::from( unsafe { CStr::from_ptr(c).to_str().unwrap() })
 }
+
+//WIP
+struct Frame {
+    num : i32,
+    dt : f32
+}
+
+struct FrameEvents
+{
+    events : Vec<i32>
+}
+
+
 

@@ -13,6 +13,7 @@ use component::mesh_render::{MeshRender, MeshRenderer};
 use component::armature_animation::ArmatureAnimation;
 use component::player::PlayerBehavior;
 use resource;
+use input;
 
 use property::{PropertyGet, PropertyWrite, WriteValue};
 
@@ -28,7 +29,7 @@ pub trait Component : Any
     }
     */
     fn load(&mut self) {}
-    fn update(&mut self, ob : &mut Object, dt : f64) {}
+    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input) {}
 
     fn get_name(&self) -> String;
     /*
@@ -180,13 +181,14 @@ impl Component for Components
 
     }
 
-    fn update(&mut self, ob : &mut Object, dt : f64)
+    //fn update(&mut self, ob : &mut Object, dt : f64)
+    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input)
     {
         match *self {
             Components::Empty => {},
             $(
             Components::$member(ref mut p) => {
-                p.update(ob, dt);
+                p.update(ob, dt, input);
             },
             )+
         }

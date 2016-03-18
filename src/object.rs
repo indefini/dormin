@@ -5,6 +5,7 @@ use shader;
 use resource;
 use material;
 use component;
+use input;
 use component::{Component,CompData, Components};
 use component::mesh_render;
 use mesh;
@@ -296,7 +297,6 @@ impl Object
         //lua.registerlib(None, meta);
         //lua.registerlib(Some("object"),yop);
 
-        println!("its okay");
         lua.pop(1);
 
         create_vec3_metatable(&mut lua);
@@ -358,7 +358,7 @@ impl Object
 
     }
 
-    pub fn update(&mut self, dt : f64)
+    pub fn update(&mut self, dt : f64, input : &input::Input)
     {
         self.luastuff(dt);
 
@@ -372,7 +372,7 @@ impl Object
 
             self.components.push(box Components::Empty);
             let mut c = self.components.swap_remove(index);
-            c.update(self, dt);
+            c.update(self, dt, input);
             self.components[index] = c;
             index = index +1;
         }
@@ -397,7 +397,6 @@ impl Object
 
     pub fn remove_comp_data(&mut self, c : Box<CompData>)
     {
-        println!("removing compdata !!!");
         self.comp_data.retain(|cd| cd.get_kind_string() != c.get_kind_string());
         //let (tx, rx) = channel();
     }
@@ -619,7 +618,6 @@ lua_extern! {
 
     unsafe fn object_string(lua: &mut lua::ExternState) -> i32 {
         //let ptr = lua.checkudata(1, "object");
-        println!("object string.............");
         //*
         let ptr = lua.touserdata(1);
         let obp : *mut Object = mem::transmute(ptr);
@@ -633,7 +631,6 @@ lua_extern! {
 
     unsafe fn tostring(lua: &mut lua::ExternState) -> i32 {
         //let ptr = lua.checkudata(1, "object");
-        println!("tttttttooootostring.............");
         //*
         let ptr = lua.touserdata(1);
         let obp : *mut Object = mem::transmute(ptr);
@@ -649,7 +646,6 @@ lua_extern! {
         let ptr = lua.touserdata(1);
         let obp : *mut Object = mem::transmute(ptr);
         let ob = &mut *obp;
-        println!("ndex called");
         0
     }
 
@@ -657,7 +653,6 @@ lua_extern! {
         let ptr = lua.touserdata(1);
         let obp : *mut Object = mem::transmute(ptr);
         let ob = &mut *obp;
-        println!("new index called on {}", ob.name);
         match lua.checkstring(2) {
             Some(s) => {
                 if s == "position" {
@@ -669,7 +664,6 @@ lua_extern! {
                     };
                 }
                 else {
-                    println!("argument 2 is string : {}", s);
                     let f = lua.checknumber(3);
                     match s {
                         "x" => ob.position.x = f,
@@ -687,13 +681,11 @@ lua_extern! {
     }
 
     unsafe fn index_handler(lua: &mut lua::ExternState) -> i32 {
-        println!("index handler...........");
         let ptr = lua.touserdata(1);
         let obp : *mut Object = mem::transmute(ptr);
         let ob = &mut *obp;
         match lua.checkstring(2) {
             Some(s) => {
-                println!("ihihihih argument 2 is string : {}", s);
                 if s == "position" {
                     return push_pointer(lua, &mut ob.position, "vec3");
                 }
@@ -725,18 +717,15 @@ lua_extern! {
     }
 
     unsafe fn vec3_index_handler(lua: &mut lua::ExternState) -> i32 {
-        println!("vec3 index handler...........");
         let ptr = lua.checkudata(1,"vec3");
         let ld : *mut LuaData<vec::Vec3> = mem::transmute(ptr);
         let v = match *ld {
             LuaData::Pointer(p) => &*p,
             LuaData::Value(ref v) => v
         };
-        println!("vec3 ::::::::::: {:?}", v);
         //let v = &*(*vp).pointer;
         match lua.checkstring(2) {
             Some(s) => {
-                println!("vec3 {}", s);
                 let f = match s {
                     "x" => v.x,
                     "y" => v.y,
@@ -761,7 +750,6 @@ lua_extern! {
     }
 
     unsafe fn vec3_newindex_handler(lua: &mut lua::ExternState) -> i32 {
-        println!("new index handler...........");
         let ptr = lua.checkudata(1,"vec3");
         let ld : *mut LuaData<vec::Vec3> = mem::transmute(ptr);
         let v = match *ld {
@@ -771,7 +759,6 @@ lua_extern! {
         //let v = &mut *(*vp).pointer;
         match lua.checkstring(2) {
             Some(s) => {
-                println!("vec3 {}", s);
                 let f = lua.checknumber(3);
                 match s {
                     "x" => v.x = f,

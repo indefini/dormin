@@ -8,6 +8,7 @@ use uuid::Uuid;
 use std::path::Path;
 use toml;
 use armature;
+use input;
 
 use object;
 use camera;
@@ -346,10 +347,10 @@ impl Scene
     }
     */
 
-    pub fn update(&mut self, dt : f64)
+    pub fn update(&mut self, dt : f64, input : &input::Input)
     {
         for o in self.objects.iter() {
-            o.write().unwrap().update(dt);
+            o.write().unwrap().update(dt, input);
         }
     }
 }
