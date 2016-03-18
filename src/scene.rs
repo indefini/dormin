@@ -1,4 +1,3 @@
-use std::collections::{LinkedList};
 use std::sync::{RwLock, Arc};
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -9,6 +8,7 @@ use uuid::Uuid;
 use std::path::Path;
 use toml;
 use armature;
+use input;
 
 use object;
 use camera;
@@ -198,7 +198,12 @@ impl Scene
                 None
             }
 
-        find(&self.objects, id)
+        if id.is_nil() {
+            None
+        }
+        else {
+            find(&self.objects, id)
+        }
     }
 
     pub fn find_objects_by_id(&self, ids : &mut Vec<Uuid>) -> Vec<Arc<RwLock<object::Object>>>
@@ -231,9 +236,35 @@ impl Scene
         return_list
     }
 
-    pub fn add_objects(&mut self, obs : &[Arc<RwLock<object::Object>>])
+    pub fn find_objects_by_id_or_none(&self, ids : &[Uuid]) -> 
+        Vec<Option<Arc<RwLock<object::Object>>>>
     {
-        self.objects.extend_from_slice(obs);
+        let mut return_list = Vec::new();
+        for i in ids {
+            if i.is_nil() {
+                return_list.push(None);
+            }
+            else {
+                return_list.push(self.find_object_by_id(i));
+            }
+        }
+
+        return_list
+    }
+
+
+    pub fn add_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
+    {
+        let pvec = self.find_objects_by_id_or_none(parents);
+
+        for (i,p) in pvec.iter().enumerate() {
+            if let Some(ref par) = *p {
+                par.write().unwrap().children.push(obs[i].clone());
+            }
+            else {
+                self.objects.push(obs[i].clone());
+            }
+        }
     }
 
     pub fn add_objects_by_vec(&mut self, obs : &mut Vec<Arc<RwLock<object::Object>>>)
@@ -241,8 +272,40 @@ impl Scene
         self.objects.append(obs);
     }
 
-    pub fn remove_objects(&mut self, obs : &[Arc<RwLock<object::Object>>])
+    pub fn remove_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
     {
+        let pvec = self.find_objects_by_id_or_none(parents);
+
+        fn remove(
+            list : &mut Vec<Arc<RwLock<object::Object>>>,
+            id : Uuid
+            )
+            {
+                let mut index = None;
+                for (j,o) in list.iter().enumerate() {
+                    if o.read().unwrap().id == id {
+                        index = Some(j);
+                        break;
+                    }
+                }
+
+                if let Some(idx) = index {
+                    list.swap_remove(idx);
+                }
+            }
+
+        for (i,p) in pvec.iter().enumerate() {
+            let rem_id = obs[i].read().unwrap().id;
+
+            if let Some(ref par) = *p {
+                remove(&mut par.write().unwrap().children, rem_id);
+            }
+            else {
+                remove(&mut self.objects, rem_id);
+            };
+        }
+
+        /*
         let mut to_remove = Vec::new();
 
         let mut obs = obs.to_vec();
@@ -267,6 +330,7 @@ impl Scene
             //TODO change parent and child
             self.objects.swap_remove(*r);
         }
+        */
     }
 
     pub fn savetoml(&self)
@@ -283,10 +347,10 @@ impl Scene
     }
     */
 
-    pub fn update(&mut self, dt : f64)
+    pub fn update(&mut self, dt : f64, input : &input::Input)
     {
         for o in self.objects.iter() {
-            o.write().unwrap().update(dt);
+            o.write().unwrap().update(dt, input);
         }
     }
 }
@@ -310,10 +374,8 @@ impl Decodable for Scene {
           name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
           id: try!(decoder.read_struct_field("id", 0, |decoder| Decodable::decode(decoder))),
          //id : Uuid::new_v4(),
-          //objects: LinkedList::new(),
           objects: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
           //tests: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
-          //tests: LinkedList::new()
           //camera : None //try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
           camera : try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
           //camera : None

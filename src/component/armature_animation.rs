@@ -14,6 +14,7 @@ use armature;
 use mesh;
 use resource;
 use vec;
+use input;
 
 #[derive(Copy,Clone)]
 pub enum State
@@ -66,7 +67,7 @@ impl Component for ArmatureAnimation
     }
     */
 
-    fn update(&mut self, ob : &mut Object, dt : f64)
+    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input)
     {
         let mut mr = 
             if let Some(ref mut mr) = ob.mesh_render {
@@ -81,11 +82,9 @@ impl Component for ArmatureAnimation
             a
         }
         else {
-            println!("update armature anim : no action");
+            //println!("update armature anim : no action");
             return
         };
-
-        println!("update armature anim");
 
         self.time = self.time + dt;
         if self.time > 50f64/30f64 {
@@ -135,7 +134,7 @@ pub fn new(ob : &Object, resource : &resource::ResourceGroup) -> Box<Components>
         armature : armature,
         arm_instance : instance,
         mesh : None,
-        action : Some(String::from("roll")),//None,
+        action : None,//Some(String::from("roll")),//None,
         time : 0f64
     };
 

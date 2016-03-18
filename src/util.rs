@@ -1,13 +1,11 @@
 use std::sync::{RwLock, Arc};
-use std::collections::LinkedList;
 use std::fs;
 use std::mem;
-
 
 use vec;
 use object;
 
-pub fn objects_center(objects : &LinkedList<Arc<RwLock<object::Object>>>) -> vec::Vec3
+pub fn objects_center(objects : &[Arc<RwLock<object::Object>>]) -> vec::Vec3
 {
     let mut v = vec::Vec3::zero();
     for o in objects.iter()
@@ -59,3 +57,22 @@ pub fn pass_slice()
         CString::new("caca").unwrap().as_ptr(),
         CString::new("bouda").unwrap().as_ptr() ];
 }
+
+pub fn c_char_to_string(c : *const c_char) -> String
+{
+    String::from( unsafe { CStr::from_ptr(c).to_str().unwrap() })
+}
+
+//WIP
+struct Frame {
+    num : i32,
+    dt : f32
+}
+
+struct FrameEvents
+{
+    events : Vec<i32>
+}
+
+
+

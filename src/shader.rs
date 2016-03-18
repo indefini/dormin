@@ -2,14 +2,16 @@ use std::collections::HashMap;
 use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::fs::File;
 use std::io::{BufReader, BufRead, Read};
-use libc::{c_char, c_uint};
+use libc::{c_char, c_uint, c_void};
 use std::ptr;
 use std::str::FromStr;
 use std::ffi::CString;
 use std::path::Path;
+use std::mem;
 //use std::default::Default;
 //use toml;
 
+use util;
 use vec;
 use resource;
 use uniform::UniformSend;
@@ -30,6 +32,9 @@ pub struct Shader
     pub uniforms : HashMap<String, *const CglShaderUniform>,
     pub state : i32,
 
+    pub vert_path : Option<String>,
+    pub frag_path : Option<String>,
+
     vert : Option<String>,
     frag : Option<String>,
 
@@ -39,8 +44,28 @@ pub struct Shader
 unsafe impl Send for Shader {}
 unsafe impl Sync for Shader {}
 
+extern fn shader_uniform_add(
+    data : *const c_void,
+    name : *const c_char,
+    cgl_uni : *const CglShaderUniform)
+{
+    let uniforms : &mut HashMap<String, *const CglShaderUniform> = unsafe {mem::transmute(data) };
+    uniforms.insert(util::c_char_to_string(name), cgl_uni);
+}
+
+extern fn shader_attribute_add(
+    data : *const c_void,
+    name : *const c_char,
+    cgl_att : *const CglShaderAttribute)
+{
+    let attributes : &mut HashMap<String, *const CglShaderAttribute> = unsafe {mem::transmute(data) };
+    attributes.insert(util::c_char_to_string(name), cgl_att);
+}
+
+
 impl Shader
 {
+    /*
     fn attribute_add(&mut self, name : &str, size : u32)
     {
         let attc = CString::new(name.as_bytes()).unwrap();
@@ -73,6 +98,7 @@ impl Shader
                 }
         }
     }
+    */
 
     pub fn uniform_set(&self, name : &str, value : &UniformSend)
     {
@@ -110,6 +136,8 @@ impl Shader
             cgl_shader : None,
             attributes : HashMap::new(),
             uniforms : HashMap::new(),
+            vert_path : None,
+            frag_path : None,
             vert : None,
             frag : None,
             state : 0
@@ -137,37 +165,22 @@ impl Shader
         }
 
         self.read_vert_frag(vert.as_ref(), frag.as_ref());
+        self.vert_path = Some(vert);
+        self.frag_path = Some(frag);
 
         //TODO remove from here
         self.cgl_init();
 
-        for line in file.lines() {
-            let l = line.unwrap();
-            let split : Vec<&str> = l.split(',').collect();
-            if split[0] == "att" {
-                let size : u32;
-                /*let op : Option<u32> = FromStr::from_str(split[2]);
-                match op {
-                    Some(u) => size = u,
-                    None => continue
-                }
-                */
-                let op = FromStr::from_str(split[2]);
-                match op {
-                    Ok(u) => size = u,
-                    _ => continue
-                }
-                println!("it's an attribute {}, {}", split[1], size);
-                self.attribute_add(split[1], size);
-            }
-            else if split[0] == "uni" {
-                self.uniform_add(split[1]);
-                println!("it's an uniform {} yoo", split[1]);
-                if split[2] == "vec4" {
-                    //TODO
-                }
-            }
-        }
+        unsafe { cgl_shader_attributes_init(
+                self.cgl_shader.unwrap(),
+                shader_attribute_add,
+                mem::transmute(&mut self.attributes)); }
+
+        unsafe { cgl_shader_uniforms_init(
+                self.cgl_shader.unwrap(),
+                shader_uniform_add,
+                mem::transmute(&mut self.uniforms)); }
+
 
         self.state = 2;
     }
@@ -228,7 +241,46 @@ impl Shader
         self.state = 3;
     }
 
+    pub fn reload(&mut self)
+    {
+        println!("RELOAD");
+        println!("TODO free resource of old shader");
 
+        let vert = if let Some(ref vert) = self.vert_path {
+            vert.clone()
+        }
+        else {
+            println!("reload early return");
+            return;
+        };
+
+        let frag = if let Some(ref frag) = self.frag_path {
+            frag.clone()
+        }
+        else {
+            println!("reload early return2");
+            return;
+        };
+        
+        
+        self.read_vert_frag(&vert, &frag);
+        self.state = 1;
+    }
+
+    pub fn load_gl(&mut self)
+    {
+        self.cgl_init();
+
+        unsafe { cgl_shader_attributes_init(
+                self.cgl_shader.unwrap(),
+                shader_attribute_add,
+                mem::transmute(&mut self.attributes)); }
+
+        unsafe { cgl_shader_uniforms_init(
+                self.cgl_shader.unwrap(),
+                shader_uniform_add,
+                mem::transmute(&mut self.uniforms)); }
+    }
 }
 
 
@@ -261,6 +313,16 @@ impl UniformSend for UniformData
     }
 }
 
+type ShaderUniformAddFn = extern fn(
+    data : *const c_void,
+    name : *const c_char,
+    cgl_uni : *const CglShaderUniform);
+
+type ShaderAttributeAddFn = extern fn(
+    data : *const c_void,
+    name : *const c_char,
+    cgl_att : *const CglShaderAttribute);
+
 #[link(name = "cypher")]
 extern {
     fn cgl_shader_init_string(
@@ -269,6 +331,7 @@ extern {
 
     pub fn cgl_shader_use(shader : *const CglShader);
 
+    /*
     pub fn cgl_shader_attribute_new(
         shader : *const CglShader,
         name : *const c_char,
@@ -277,6 +340,17 @@ extern {
     pub fn cgl_shader_uniform_new(
         shader : *const CglShader,
         name : *const c_char) -> *const CglShaderUniform;
+        */
+
+    fn cgl_shader_attributes_init(
+        shader : *const CglShader, 
+        cb : ShaderAttributeAddFn,
+        data : *const c_void);
+
+    fn cgl_shader_uniforms_init(
+        shader : *const CglShader, 
+        cb : ShaderUniformAddFn,
+        data : *const c_void);
 
 }
 
@@ -300,6 +374,8 @@ impl Decodable for Shader {
              uniforms : HashMap::new(),
              vert : None,
              frag : None,
+             vert_path : None,
+             frag_path : None,
              state : 0
         })
     })

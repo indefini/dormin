@@ -67,8 +67,8 @@ impl Default for Material
             name : String::from("default"),
             shader : None,
             state : 0,
-            texture : None,
-            textures : LinkedList::new()
+            textures : HashMap::new()
+            uniforms : HashMap::new()
         }
     }
 }

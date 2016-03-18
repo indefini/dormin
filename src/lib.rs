@@ -53,6 +53,8 @@ mod test {
 #[macro_use]
 pub mod property;
 
+pub mod input;
+
 pub mod resource;
 pub mod shader;
 pub mod material;
@@ -78,6 +80,7 @@ pub mod model;
 
 pub mod component;
 pub use component::manager;
+
 
 mod util;
 

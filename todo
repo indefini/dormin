@@ -1,4 +1,6 @@
-remove linkedlist
+remove arc/rwlock especially in restest/resdata
+use serde
+
 
 make new tree for scene
 - must be able to :

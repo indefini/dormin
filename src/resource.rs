@@ -242,7 +242,7 @@ impl Create for armature::Armature
 
 pub struct ResourceManager<T>
 {
-    resources : HashMap<String, Arc<RwLock<ResTest<T>>>>,
+    pub resources : HashMap<String, Arc<RwLock<ResTest<T>>>>,
 }
 
 unsafe impl<T:Send> Send for ResourceManager<T> {}

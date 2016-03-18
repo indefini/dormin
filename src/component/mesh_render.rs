@@ -1,3 +1,4 @@
+use input;
 //use component;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -71,9 +72,8 @@ impl Component for MeshRenderer
     }
     */
 
-    fn update(&mut self, ob : &mut Object, dt : f64)
+    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input)
     {
-        println!("update mesh render");
     }
 
     fn get_name(&self) -> String {

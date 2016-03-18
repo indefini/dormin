@@ -531,7 +531,7 @@ impl ArmatureInstance
     {
         let action = match armature.find_action(action_name) {
             Some(a) => a,
-            None => { println!("no such action  {}", action_name);  return }
+            None => { println!("no such action '{}', for armature '{}'", action_name, armature.name);  return }
         };
 
         let frame = {
