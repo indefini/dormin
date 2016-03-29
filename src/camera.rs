@@ -11,14 +11,14 @@ use geometry;
 use transform::Orientation;
 use uuid;
 
-#[derive(RustcDecodable,RustcEncodable)]
+#[derive(Clone,RustcDecodable,RustcEncodable)]
 pub enum Projection
 {
     Perspective,
     Orthographic
 }
 
-#[derive(RustcDecodable,RustcEncodable)]
+#[derive(Clone,RustcDecodable,RustcEncodable)]
 pub struct CameraData
 {
     fovy : f64,
@@ -137,7 +137,7 @@ impl ObjectKind {
     }
 }
 
-#[derive(RustcDecodable,RustcEncodable)]
+#[derive(Clone,RustcDecodable,RustcEncodable)]
 pub struct Camera
 {
     pub data : CameraData,

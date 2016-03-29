@@ -1,4 +1,5 @@
 use object;
+use scene;
 use vec;
 use std::any::{Any};//, AnyRefExt};
 use std::f64::consts;
@@ -682,6 +683,7 @@ property_set_impl!(vec::Quat,[x,y,z,w]);
 //property_set_impl!(armature::MeshRender,[mesh,material]);
 property_set_impl!(object::Object,[name,position,orientation,scale,comp_data,comp_lua]);
 //property_set_impl!(object::Object,[name,position,orientation,scale]);
+property_set_impl!(scene::Scene,[name]);
 
 macro_rules! property_get_impl(
     ($my_type:ty, [ $($member:ident),+ ]) => (

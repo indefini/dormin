@@ -1,3 +1,5 @@
+TODO scene and camera clone are wrong : object id
+
 remove arc/rwlock especially in restest/resdata
 use serde
 

@@ -355,6 +355,35 @@ impl Scene
     }
 }
 
+impl Clone for Scene {
+
+    //TODO
+    fn clone(&self) -> Scene {
+        println!("TODO ERR scene cloning is not done yet, camera too");
+        let mut objects = Vec::new();
+        for o in self.objects.iter() {
+            let oc = o.read().unwrap().clone();
+            objects.push(Arc::new(RwLock::new(oc)));
+        }
+
+        let cam = if let Some(ref cc) = self.camera {
+            let camc = cc.borrow().clone();
+            Some(Rc::new(RefCell::new(camc)))
+        }
+        else {
+            None
+        };
+
+        Scene {
+            name : self.name.clone(),
+            id : self.id.clone(),//?
+            camera : cam,
+            objects : objects
+        }
+    }
+}
+
+
 impl Encodable for Scene {
   fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
       encoder.emit_struct("Scene", 1, |encoder| {
