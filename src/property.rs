@@ -735,4 +735,5 @@ property_get_impl!(resource::ResTT<material::Material>,[name]);
 //property_get_impl!(mesh_render::MeshRender,[mesh,material]);
 //property_get_impl!(object::Object,[name,position,orientation,scale]);
 property_get_impl!(object::Object,[name,position,orientation,scale,comp_data,comp_lua]);
+property_get_impl!(scene::Scene,[name]);
 
