@@ -3,7 +3,6 @@ TODO scene and camera clone are wrong : object id
 remove arc/rwlock especially in restest/resdata
 use serde
 
-
 make new tree for scene
 - must be able to :
   from the point of view of the object :
@@ -17,7 +16,7 @@ make new tree for scene
     add children
     change/remove parent
     add full node with children
-    
+
 
 
 idea :
@@ -71,7 +70,7 @@ struct Node
 objects, parents, and child have the same size
 struct Scene
 {
-  objects : Vec<Object>, 
+  objects : Vec<Object>,
   parents : Vec<int>,
   childs : Vec<Vec<usize>
 
@@ -82,22 +81,22 @@ almost same as :
 
 struct Scene
 {
-  objects : Vec<Object>, 
+  objects : Vec<Object>,
   free_index : Vec<i32>
 }
 
-struct Object 
+struct Object
 {
   parent : usize,
   child : Vec<usize>
 
 }
 
-or again : 
+or again :
 
 struct Scene
 {
-  nodes : Vec<Node>, 
+  nodes : Vec<Node>,
   free_index : Vec<i32>
 }
 
@@ -116,7 +115,7 @@ struct Object
 {
   parent : usize, // parent node : scene.layer_pos[layer-1][parent]
   layer : i32(starts with 0),
-  childs : Vec<Object> 
+  childs : Vec<Object>
 }
 
 // a scene start with a 0 layer
@@ -132,7 +131,7 @@ struct Object
 {
   parent : usize, // parent node : scene.layer_pos[layer-1][parent]
   layer : i32(starts with 0),
-  childs : Vec<usize> 
+  childs : Vec<usize>
 }
 
 // a scene start with a 0 layer
@@ -146,8 +145,8 @@ struct Scene
 7)
 struct Object
 {
-  parent : usize, 
-  childs : Vec<usize> 
+  parent : usize,
+  childs : Vec<usize>
 }
 
 struct Scene

@@ -254,7 +254,7 @@ impl Mesh
        /*
        let bufname = String::from("position");
 
-       m.buffers.insert(bufname.clone(), 
+       m.buffers.insert(bufname.clone(),
                         box Buffer::new(
                             bufname.clone(),
                             Vec::from_slice(VERTEX_DATA),
@@ -276,11 +276,11 @@ impl Mesh
            buffers_f32_base : HashMap::new(),
            weights : Vec::new(),
        };
-        
+
        m
     }
 
-    pub fn file_read(&mut self) 
+    pub fn file_read(&mut self)
     {
         if self.state != 0 {
             return;
@@ -429,7 +429,7 @@ impl Mesh
                    {
                        uuu.push((1f32 - x) as f32);
                    }
-                   else 
+                   else
                    */
                    {
                        uuu.push(x as f32);
@@ -469,7 +469,7 @@ impl Mesh
            for _ in 0..vertex_weight_count {
                let weight_count = file.read_u16::<LittleEndian>().unwrap();
                let mut weights = Vec::with_capacity(weight_count as usize);
-                
+
                if weight_count > 0 {
                    println!("  weight count : {} ", weight_count);
                }
@@ -571,7 +571,7 @@ impl Mesh
             },
             Occupied(entry) => {
                 let en = entry.into_mut();
-                en.data.push_all(vvv.as_ref());
+                en.data.extend_from_slice(vvv.as_ref());
             }
         };
 
@@ -587,7 +587,7 @@ impl Mesh
             },
             Occupied(entry) => {
                 let en = entry.into_mut();
-                en.data.push_all(colbuf.as_ref());
+                en.data.extend_from_slice(colbuf.as_ref());
             }
         };
 
@@ -769,7 +769,7 @@ impl resource::ResourceT for Mesh
         if self.state == 0 {
             self.file_read();
         }
-        
+
         if self.state == 1 {
             for (_,b) in self.buffers_f32.iter_mut() {
                 Some(b.send());
