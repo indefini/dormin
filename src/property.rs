@@ -1,5 +1,6 @@
 use object;
 use scene;
+use camera;
 use vec;
 use std::any::{Any};//, AnyRefExt};
 use std::f64::consts;
@@ -9,6 +10,8 @@ use component::mesh_render;
 use resource;
 use mesh;
 use material;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 //log_syntax!()
 //trace_macros!(true)
@@ -296,6 +299,20 @@ impl<T:PropertyWrite> PropertyWrite for Box<T>
   }
 }
 
+impl<T:PropertyWrite> PropertyWrite for Rc<RefCell<T>>
+{
+  fn test_set_property(&mut self, value: &Any)
+  {
+      self.borrow_mut().test_set_property(value);
+  }
+
+  fn test_set_property_hier(&mut self, name : &str, value: &Any)
+  {
+      self.borrow_mut().test_set_property_hier(name, value);
+  }
+}
+
+
 //impl<T:PropertyWrite+'static+Clone+resource::Create> PropertyWrite for Option<T>
 impl<T:PropertyWrite+Any+Clone+resource::Create> PropertyWrite for Option<T>
 {
@@ -399,6 +416,15 @@ impl<T:PropertyGet> PropertyGet for Option<T>
       }
   }
 }
+
+impl<T:PropertyGet> PropertyGet for Rc<RefCell<T>>
+{
+  fn get_property_hier(&self, name : &str) -> Option<Box<Any>>
+  {
+      self.borrow().get_property_hier(name)
+  }
+}
+
 
 
 impl<T> PropertyWrite for resource::ResTT<T> where T:Any
@@ -683,7 +709,9 @@ property_set_impl!(vec::Quat,[x,y,z,w]);
 //property_set_impl!(armature::MeshRender,[mesh,material]);
 property_set_impl!(object::Object,[name,position,orientation,scale,comp_data,comp_lua]);
 //property_set_impl!(object::Object,[name,position,orientation,scale]);
-property_set_impl!(scene::Scene,[name]);
+property_set_impl!(scene::Scene,[name,camera]);
+property_set_impl!(camera::Camera,[data]);
+property_set_impl!(camera::CameraData,[far,near]);
 
 macro_rules! property_get_impl(
     ($my_type:ty, [ $($member:ident),+ ]) => (
@@ -735,5 +763,6 @@ property_get_impl!(resource::ResTT<material::Material>,[name]);
 //property_get_impl!(mesh_render::MeshRender,[mesh,material]);
 //property_get_impl!(object::Object,[name,position,orientation,scale]);
 property_get_impl!(object::Object,[name,position,orientation,scale,comp_data,comp_lua]);
-property_get_impl!(scene::Scene,[name]);
-
+property_get_impl!(scene::Scene,[name,camera]);
+property_get_impl!(camera::Camera,[data]);
+property_get_impl!(camera::CameraData,[far,near]);

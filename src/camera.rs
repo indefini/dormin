@@ -158,20 +158,6 @@ pub struct CameraRom
 
 impl Camera
 {
-    /*
-    pub fn new() -> Camera
-    {
-        let c = Camera {
-            data : Default::default(),
-            object : Arc::new(RwLock::new(object::Object::new("camera")))
-        };
-
-        c.object.write().position = vec::Vec3::new(0.1f64, 0f64, 0f64);
-
-        c
-    }
-    */
-
     pub fn get_perspective(&self) -> matrix::Matrix4
     {
         //TODO

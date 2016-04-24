@@ -4,6 +4,10 @@ use shader;
 use fbo;
 use material;
 use armature;
+use camera;
+use object;
+use vec;
+use transform;
 
 use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use std::collections::HashMap;
@@ -17,6 +21,7 @@ use std::thread;
 
 use std::rc::Rc;
 use std::cell::RefCell;
+use uuid;
 
 
 /*
@@ -236,7 +241,54 @@ impl Create for armature::Armature
     }
 }
 
+impl<T : Create> Create for Rc<RefCell<T>>
+{
+    fn create(name : &str) -> Rc<RefCell<T>>
+    {
+        Rc::new(RefCell::new(T::create(name)))
+    }
 
+    fn inittt(&mut self)
+    {
+        self.borrow_mut().inittt();
+    }
+}
+
+impl Create for camera::Camera
+{
+    fn create(name : &str) -> camera::Camera
+    {
+        println!("review this of course");
+        let o = object::Object {
+            name : String::from("camera"),
+            id : uuid::Uuid::new_v4(),
+            mesh_render : None,
+            position : vec::Vec3::zero(),
+            //orientation : vec::Quat::identity(),
+            orientation : transform::Orientation::new_quat(),
+            //angles : vec::Vec3::zero(),
+            scale : vec::Vec3::one(),
+            children : Vec::new(),
+            parent : None,
+            //transform : box transform::Transform::new()
+            components : Vec::new(),
+            comp_data : Vec::new(),
+            comp_string : Vec::new(),
+            comp_lua : Vec::new(),
+        };
+
+        camera::Camera {
+            data : Default::default(),
+            object : Arc::new(RwLock::new(o)),
+            id : uuid::Uuid::new_v4(),
+            object_id : None
+        }
+    }
+
+    fn inittt(&mut self)
+    {
+    }
+}
 
 
 
