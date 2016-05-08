@@ -111,6 +111,7 @@ impl RenderPass
     pub fn draw_frame(
         &self,
         resource : &resource::ResourceGroup,
+        load : Arc<Mutex<usize>>
         ) -> usize
     {
         let shader = &mut *self.shader.write().unwrap();
@@ -139,7 +140,8 @@ impl RenderPass
                     shader,
                     &mut *ob,
                     &matrix, 
-                    resource
+                    resource,
+                    load.clone()
                     );
 
                 not_loaded = not_loaded + not;
@@ -172,6 +174,7 @@ impl RenderPass
         ob : &mut object::Object,
         matrix : &matrix::Matrix4,
         resource : &resource::ResourceGroup,
+        load : Arc<Mutex<usize>>
         ) -> usize
     {
         let mut not_loaded = 0;
@@ -186,14 +189,14 @@ impl RenderPass
 
         let mut mat_init = false;
         if let Some(m) = ob.mesh_render.as_mut().unwrap().get_mat_instance() {
-            not_loaded = object_init_mat(&mut *m, shader, resource);
+            not_loaded = object_init_mat(&mut *m, shader, resource, load.clone());
             mat_init = true;
         }
 
         if !mat_init {
             let m = ob.mesh_render.as_mut().unwrap().material.clone();
             let mut m = m.write().unwrap();
-            not_loaded = object_init_mat(&mut *m, shader, resource);
+            not_loaded = object_init_mat(&mut *m, shader, resource, load);
         }
 
         let mut has_instance = false;
@@ -557,7 +560,8 @@ impl Render {
         objects : &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
         draggers : &[Arc<RwLock<object::Object>>],
-        on_finish : &Fn(bool)
+        on_finish : &Fn(bool),
+        load : Arc<Mutex<usize>>
         ) -> usize
     {
         let mut not_loaded = 0;
@@ -566,7 +570,8 @@ impl Render {
         for p in self.passes.values()
         {
             let not = p.draw_frame(
-                &self.resource
+                &self.resource,
+                load.clone()
                 );
 
             not_loaded = not_loaded + not;
@@ -579,7 +584,8 @@ impl Render {
         for p in self.passes.values()
         {
             let not = p.draw_frame(
-                &self.resource
+                &self.resource,
+                load.clone()
                 );
 
             not_loaded = not_loaded + not;
@@ -608,7 +614,8 @@ impl Render {
         for p in self.passes.values()
         {
             let not = p.draw_frame(
-                &self.resource
+                &self.resource,
+                load.clone()
                 );
 
             not_loaded = not_loaded + not;
@@ -625,7 +632,8 @@ impl Render {
             for p in self.passes.values()
             {
                 let not = p.draw_frame(
-                    &self.resource
+                    &self.resource,
+                    load.clone()
                     );
             
                 not_loaded = not_loaded + not;
@@ -682,7 +690,8 @@ impl Render {
             for p in self.passes.values()
             {
                 let not = p.draw_frame(
-                    &self.resource
+                    &self.resource,
+                    load.clone()
                     );
                 not_loaded = not_loaded + not;
             }
@@ -702,6 +711,8 @@ fn prepare_passes_object(
     camera : Rc<RefCell<camera::Camera>>
     )
 {
+    let load = Arc::new(Mutex::new(0));
+
     {
         let occ = o.clone();
         for c in occ.read().unwrap().children.iter()
@@ -735,7 +746,7 @@ fn prepare_passes_object(
             None =>  return
         };
 
-        let shader = match shader_yep.get_resource(shader_manager) {
+        let shader = match shader_yep.get_resource(shader_manager, load) {
             Some(s) => s,
             None => return
         };
@@ -925,9 +936,10 @@ impl GameRender {
     {
         self.prepare_passes_objects_per(objects);
 
+        let todo = Arc::new(Mutex::new(0));
         for p in self.passes.values()
         {
-            p.draw_frame(&self.resource);
+            p.draw_frame(&self.resource, todo.clone());
         }
     }
 }
@@ -946,9 +958,10 @@ fn object_init_mat(
         material : &mut material::Material,
         shader : &shader::Shader,
         resource : &resource::ResourceGroup,
-        //load : Mutex<usize>>)
+        load : Arc<Mutex<usize>>
     ) -> usize
 {
+    println!("INIT MAT");
     let mut not_loaded = 0;
     /*
     for (_,t) in material.textures.iter_mut() {
@@ -974,7 +987,7 @@ fn object_init_mat(
     for (name,t) in material.textures.iter_mut() {
         match *t {
             material::Sampler::ImageFile(ref mut img) => {
-                let r = resource::resource_get(&mut *resource.texture_manager.borrow_mut(), img);
+                let r = resource::resource_get(&mut *resource.texture_manager.borrow_mut(), img, load.clone());
                 match r {
                     Some(t) => {
                         let mut tex = t.write().unwrap();
@@ -991,7 +1004,7 @@ fn object_init_mat(
                 }
             },
             material::Sampler::Fbo(ref mut fbo, ref attachment) => {
-                let yep = resource::resource_get(&mut *resource.fbo_manager.borrow_mut(), fbo);
+                let yep = resource::resource_get(&mut *resource.fbo_manager.borrow_mut(), fbo, load.clone());
                 match yep {
                     Some(yoyo) => {
                         let fc = yoyo.clone();

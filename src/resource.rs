@@ -13,7 +13,7 @@ use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::collections::hash_map::Entry::{Occupied,Vacant};
-use std::sync::{RwLock, Arc};
+use std::sync::{RwLock, Arc, Mutex};
 use std::sync::mpsc::channel;
 //use std::time::Duration;
 use self::ResTest::{ResData,ResWait,ResNone};
@@ -101,12 +101,12 @@ impl<T> Clone for ResTT<T>
 
 impl <T:'static+Create+Send+Sync> ResTT<T>
 {
-    pub fn get_resource(&mut self, manager : &mut ResourceManager<T> ) -> Option<Arc<RwLock<T>>>
+    pub fn get_resource(&mut self, manager : &mut ResourceManager<T>, load : Arc<Mutex<usize>> ) -> Option<Arc<RwLock<T>>>
     {
         match self.resource {
             ResTest::ResData(ref rd) => Some(rd.clone()),
             //ResTest::ResWait => None,
-            _ => resource_get(manager, self)
+            _ => resource_get(manager, self, load)
         }
     }
 
@@ -310,7 +310,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn request_use(&mut self, name : &str) -> ResTest<T>
+    pub fn request_use(&mut self, name : &str, load : Arc<Mutex<usize>>) -> ResTest<T>
     {
         let key = String::from(name);
 
@@ -335,6 +335,12 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
             }
         }
 
+        {
+            let mut l = load.lock().unwrap();
+            *l += 1;
+            println!("      ADDING {}", *l);
+        }
+
         let s = String::from(name);
 
         let (tx, rx) = channel::<Arc<RwLock<T>>>();
@@ -356,6 +362,9 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                     Ok(value) =>  { 
                         let entry = &mut *va.write().unwrap();
                         *entry = ResTest::ResData(value.clone());
+                        let mut l = load.lock().unwrap();
+                        *l -= 1;
+                        println!("      SUBBBBBB {}", *l);
                         break; }
                 }
             }
@@ -560,13 +569,15 @@ impl<T> Decodable for ResTT<T> {
 
 pub fn resource_get<T:'static+Create+Send+Sync>(
     manager : &mut ResourceManager<T>,
-    res: &mut ResTT<T>)
+    res: &mut ResTT<T>,
+    load : Arc<Mutex<usize>>
+    )
     -> Option<Arc<RwLock<T>>>
 {
     let mut the_res : Option<Arc<RwLock<T>>> = None;
     match res.resource{
         ResNone | ResWait => {
-            res.resource = manager.request_use(res.name.as_ref());
+            res.resource = manager.request_use(res.name.as_ref(), load);
             match res.resource {
                 ResData(ref data) => {
                     the_res = Some(data.clone());
