@@ -366,6 +366,66 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     }
 
+    pub fn request_use_copy_test<F>(&mut self, name : &str, on_ready : F) -> ResTest<T>
+        //where F : Fn(), F:Send +'static
+        where F : Fn() + Send + 'static + Sync
+    {
+        let key = String::from(name);
+
+        let va : Arc<RwLock<ResTest<T>>> = match self.resources.entry(key) {
+            Entry::Vacant(entry) => entry.insert(Arc::new(RwLock::new(ResTest::ResNone))).clone(),
+            Entry::Occupied(entry) => entry.into_mut().clone(),
+        };
+
+        {
+            let v : &mut ResTest<T> = &mut *va.write().unwrap();
+
+            match *v {
+                ResTest::ResData(ref yep) => {
+                    return ResTest::ResData(yep.clone());
+                },
+                ResTest::ResWait => {
+                    return ResTest::ResWait;
+                },
+                ResTest::ResNone => {
+                    *v = ResTest::ResWait;
+                },
+            }
+        }
+
+        let s = String::from(name);
+
+        let (tx, rx) = channel::<Arc<RwLock<T>>>();
+        let guard = thread::spawn(move || {
+            //thread::sleep(::std::time::Duration::seconds(5));
+            //thread::sleep_ms(5000);
+            let mt : T = Create::create(s.as_ref());
+            let m = Arc::new(RwLock::new(mt));
+            m.write().unwrap().inittt();
+            let result = tx.send(m.clone());
+        });
+
+        //let result = guard.join();
+
+        thread::spawn( move || {
+            loop {
+                match rx.try_recv() {
+                    Err(_) => {},
+                    Ok(value) =>  { 
+                        let entry = &mut *va.write().unwrap();
+                        *entry = ResTest::ResData(value.clone());
+                        on_ready();
+                        break; }
+                }
+            }
+        });
+
+        return ResTest::ResWait;
+
+
+    }
+
+
         //TODO wip
         /*
     pub fn request_use_and_call<F>(&mut self, name : &str, f : F) 
@@ -500,7 +560,7 @@ impl<T> Decodable for ResTT<T> {
 
 pub fn resource_get<T:'static+Create+Send+Sync>(
     manager : &mut ResourceManager<T>,
-    res: &mut ResTT<T>) 
+    res: &mut ResTT<T>)
     -> Option<Arc<RwLock<T>>>
 {
     let mut the_res : Option<Arc<RwLock<T>>> = None;
