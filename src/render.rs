@@ -961,7 +961,6 @@ fn object_init_mat(
         load : Arc<Mutex<usize>>
     ) -> usize
 {
-    println!("INIT MAT");
     let mut not_loaded = 0;
     /*
     for (_,t) in material.textures.iter_mut() {
@@ -999,7 +998,7 @@ fn object_init_mat(
                     },
                     None => {
                         not_loaded = not_loaded +1;
-                        println!("there is NONONO tex........ {}", name);
+                        //println!("there is NONONO tex........ {}", name);
                     }
                 }
             },
