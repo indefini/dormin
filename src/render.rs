@@ -932,14 +932,14 @@ impl GameRender {
     pub fn draw(
         &mut self,
         objects : &[Arc<RwLock<object::Object>>],
+        loading : Arc<Mutex<usize>>
         ) -> ()
     {
         self.prepare_passes_objects_per(objects);
 
-        let todo = Arc::new(Mutex::new(0));
         for p in self.passes.values()
         {
-            p.draw_frame(&self.resource, todo.clone());
+            p.draw_frame(&self.resource, loading.clone());
         }
     }
 }
