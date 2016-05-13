@@ -933,14 +933,18 @@ impl GameRender {
         &mut self,
         objects : &[Arc<RwLock<object::Object>>],
         loading : Arc<Mutex<usize>>
-        ) -> ()
+        ) -> bool
     {
         self.prepare_passes_objects_per(objects);
 
+        let mut not_yet_loaded = 0;
         for p in self.passes.values()
         {
-            p.draw_frame(&self.resource, loading.clone());
+            let r = p.draw_frame(&self.resource, loading.clone());
+            not_yet_loaded += r;
         }
+
+        not_yet_loaded > 0
     }
 }
 
