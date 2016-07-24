@@ -316,7 +316,7 @@ impl Render {
 
         {
             let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            create_grid(&mut *m.write().unwrap(), 100i32, 10i32);
+            create_grid(&mut *m.write().unwrap(), 100i32, 1i32);
 
             let mere = mesh_render::MeshRenderer::new_with_mesh(
                 m,
