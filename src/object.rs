@@ -49,6 +49,8 @@ pub struct Object
     pub comp_data : Vec<Box<CompData>>,
     pub comp_string : Vec<String>,
     pub comp_lua : Vec<String>,
+
+    //pub comp_load : Vec<Box<Components>>,
 }
 
 //Real object that the user use (like object state)
