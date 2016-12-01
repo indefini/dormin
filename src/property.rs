@@ -576,6 +576,7 @@ fn join_string(path : &Vec<String>) -> String
 }
 */
 
+#[macro_export]
 macro_rules! property_set_impl(
     ($my_type:ty, [ $($member:ident),+ ]) => (
         impl PropertyWrite for $my_type
@@ -713,6 +714,7 @@ property_set_impl!(scene::Scene,[name,camera]);
 property_set_impl!(camera::Camera,[data]);
 property_set_impl!(camera::CameraData,[far,near]);
 
+#[macro_export]
 macro_rules! property_get_impl(
     ($my_type:ty, [ $($member:ident),+ ]) => (
         impl PropertyGet for $my_type
