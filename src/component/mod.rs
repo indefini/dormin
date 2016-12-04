@@ -1,3 +1,4 @@
+
 pub use self::manager::{
     Component,
     Manager,
@@ -9,3 +10,16 @@ pub mod player;
 pub mod manager;
 pub mod armature_animation;
 pub mod mesh_render;
+
+
+//start trying to make a trait component
+// Problem : will I be able to de/serialize it.
+
+pub trait CompTrait {
+    //const ID : &'static str;
+
+    //fn new() -> Self;
+    fn update(&mut self);//, world : &mut World);
+}
+
+

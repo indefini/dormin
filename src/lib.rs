@@ -1,6 +1,7 @@
 #![feature(box_syntax)]
 #![feature(step_by)]
 #![feature(zero_one)]
+#![feature(associated_consts)]
 
 #![feature(vec_push_all)]
 

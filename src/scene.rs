@@ -24,6 +24,7 @@ pub struct Scene
     pub objects : Vec<Arc<RwLock<object::Object>>>,
 }
 
+/*
 pub struct SceneRom
 {
     pub name : String,
@@ -31,6 +32,7 @@ pub struct SceneRom
     pub objects : Vec<object::ObjectRom>,
     pub camera : Option<camera::CameraRom>
 }
+*/
 
 impl Scene
 {

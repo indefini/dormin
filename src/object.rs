@@ -13,6 +13,7 @@ use mesh;
 use std::sync::{RwLock, Arc};//,RWLockReadGuard};
 use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::collections::hash_map::Entry::{Occupied,Vacant};
+use std::collections::HashMap;
 use uuid;
 use uuid::Uuid;
 use core::marker::Sized;
@@ -49,8 +50,6 @@ pub struct Object
     pub comp_data : Vec<Box<CompData>>,
     pub comp_string : Vec<String>,
     pub comp_lua : Vec<String>,
-
-    //pub comp_load : Vec<Box<Components>>,
 }
 
 //Real object that the user use (like object state)
@@ -109,7 +108,7 @@ impl Clone for Object {
             components : components,
             comp_data : comp_data,
             comp_string : self.comp_string.clone(),
-            comp_lua : self.comp_lua.clone()
+            comp_lua : self.comp_lua.clone(),
         }
     }
 }

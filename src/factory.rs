@@ -101,7 +101,7 @@ impl Factory {
             components : o.components.clone(),
             comp_data : o.comp_data.clone(),
             comp_string : o.comp_string.clone(),
-            comp_lua : o.comp_string.clone(),
+            comp_lua : o.comp_lua.clone(),
         }
     }
 
