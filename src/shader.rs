@@ -241,7 +241,8 @@ impl Shader
         self.state = 3;
     }
 
-    pub fn reload(&mut self)
+    /// returns true if it actually reloads
+    pub fn reload(&mut self) -> bool
     {
         println!("RELOAD");
         println!("TODO free resource of old shader");
@@ -251,7 +252,7 @@ impl Shader
         }
         else {
             println!("reload early return");
-            return;
+            return false;
         };
 
         let frag = if let Some(ref frag) = self.frag_path {
@@ -259,12 +260,14 @@ impl Shader
         }
         else {
             println!("reload early return2");
-            return;
+            return false;
         };
         
         
         self.read_vert_frag(&vert, &frag);
         self.state = 1;
+        
+        true
     }
 
     pub fn load_gl(&mut self)
