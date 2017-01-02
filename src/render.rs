@@ -574,7 +574,7 @@ impl Render {
                 load.clone()
                 );
 
-            not_loaded = not_loaded + not;
+            not_loaded += not;
         }
         fbo::Fbo::cgl_use_end();
 
