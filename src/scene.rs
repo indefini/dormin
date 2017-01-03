@@ -24,16 +24,6 @@ pub struct Scene
     pub objects : Vec<Arc<RwLock<object::Object>>>,
 }
 
-/*
-pub struct SceneRom
-{
-    pub name : String,
-    pub id : Uuid,
-    pub objects : Vec<object::ObjectRom>,
-    pub camera : Option<camera::CameraRom>
-}
-*/
-
 impl Scene
 {
     pub fn new(name : &str, id : Uuid, cam : camera::Camera) -> Scene

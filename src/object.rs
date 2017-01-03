@@ -30,56 +30,65 @@ use lua;
 use libc::c_void;
 
 
-pub struct ThreadObject(Arc<RwLock<Object>>);
-
 //#[derive(Decodable, Encodable)]
 //#[derive(Encodable)]
 //#[derive(Clone)]
 pub struct Object
 {
+    // Object Architecture
+    // object/world architecture is still not well defined... comments are here for thinking...
+    
+    // - There was an idea before where we could have an Object separated into 2 :
+    // The object that we write to a file and the object instance that we use in the world.
+    // it was just an idea and this comment can be scrapped if it is not relevant anymore.
+    
+
+    // - if we use just an id or an index.
+    
+
+    // Problems to always have in mind if/when changing object architecture
+    // - how an object reference another.
+    // - graph : relations between parents and children
+    // - how we de/serialize objects
+    //      - how an object is represented on the disk
+    //      - how an object is loaded from that representation and created in the world.
+    //          - it needs to go into a load state and then an initial state
+    //          - we should always be able to reset the object to this initial state (without
+    //          loading of course)
+    // - what happens when we want to remove an object
+    //      - what we do with his components if they are stored somewhere else
+    // - how do we updates objects and components
+    //      - when we want to update a component, how do we get a reference to
+    //          - this object components.
+    //          - other objects components : for example doing a search like objects with enemy
+    //          components that are around me etc.
+    
+    // An object (and by extension the world) can exist in multiple forms
+    // - on the disk, on files, serialized.
+    // - loading state
+    // - loaded
+    //      - init state (must be saved)
+    //      - living
+
+    //Identification
     pub name : String,
     pub id : uuid::Uuid,
-    pub mesh_render : Option<mesh_render::MeshRenderer>,
+
+    // Transform
+    //pub transform : Box<transform::Transform>
     pub position : vec::Vec3,
     pub orientation : transform::Orientation,
     pub scale : vec::Vec3,
     pub children : Vec<Arc<RwLock<Object>>>,
     pub parent : Option<Arc<RwLock<Object>>>,
-    //pub transform : Box<transform::Transform>
+
+    // Components
+    pub mesh_render : Option<mesh_render::MeshRenderer>,
     pub components : Vec<Box<Components>>,
     pub comp_data : Vec<Box<CompData>>,
     pub comp_string : Vec<String>,
     pub comp_lua : Vec<String>,
 }
-
-//Real object that the user use (like object state)
-// TODO rename to object
-pub struct ObjectRom
-{
-    pub name : String,
-    pub id : uuid::Uuid,
-    //pub mesh_render : Option<mesh_render::MeshRender>,
-    pub mesh_render : Option<(String, String)>,
-    pub position : vec::Vec3,
-    pub orientation : transform::Orientation,
-    pub scale : vec::Vec3,
-    pub children : Vec<ObjectRom>,
-    pub parent : Option<uuid::Uuid>,
-    //pub transform : Box<transform::Transform>
-    pub components : Vec<String>,
-    pub comp_data : Vec<Box<CompData>>,
-    
-    pub instance : Option<ObjectInstance>
-}
-
-// only used by engine, not editable by yser, not encodable
-pub struct ObjectInstance
-{
-    pub mesh_render : Option<mesh_render::MeshRenderer>,
-    pub parent : Option<Arc<RwLock<ObjectRom>>>,
-    pub components : Rc<RefCell<Vec<Rc<RefCell<Box<Component>>>>>>,
-}
-
 
 unsafe impl Send for Object {}
 unsafe impl Sync for Object {}
