@@ -20,6 +20,7 @@ pub struct Scene
     pub name : String,
     pub id : Uuid,
     pub camera : Option<Rc<RefCell<camera::Camera>>>,
+    pub cameras : Vec<Rc<RefCell<camera::Camera>>>,
 
     pub objects : Vec<Arc<RwLock<object::Object>>>,
 }
@@ -28,11 +29,15 @@ impl Scene
 {
     pub fn new(name : &str, id : Uuid, cam : camera::Camera) -> Scene
     {
+        let cam = Rc::new(RefCell::new(cam));
+        let cameras = vec![cam.clone()];
+
         Scene {
             name : String::from(name),
             id : id,
             objects : Vec::new(),
-            camera : Some(Rc::new(RefCell::new(cam)))
+            camera : Some(cam),
+            cameras : cameras
         }
     }
 
@@ -370,7 +375,8 @@ impl Clone for Scene {
             name : self.name.clone(),
             id : self.id.clone(),//?
             camera : cam,
-            objects : objects
+            cameras : self.cameras.clone(),
+            objects : objects,
         }
     }
 }
@@ -383,6 +389,7 @@ impl Encodable for Scene {
           try!(encoder.emit_struct_field( "id", 1usize, |encoder| self.id.encode(encoder)));
           try!(encoder.emit_struct_field( "objects", 2usize, |encoder| self.objects.encode(encoder)));
           try!(encoder.emit_struct_field( "camera", 3usize, |encoder| self.camera.encode(encoder)));
+          try!(encoder.emit_struct_field( "cameras", 4usize, |encoder| self.cameras.encode(encoder)));
           Ok(())
       })
   }
@@ -398,7 +405,8 @@ impl Decodable for Scene {
           objects: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
           //tests: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
           //camera : None //try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
-          camera : try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
+          camera : try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder))),
+          cameras : try!(decoder.read_struct_field("cameras", 0, |decoder| Decodable::decode(decoder)))
           //camera : None
         })
     })

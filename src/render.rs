@@ -186,61 +186,48 @@ impl RenderPass
             return not_loaded;
         }
 
-
-        let mut mat_init = false;
-        if let Some(m) = ob.mesh_render.as_mut().unwrap().get_mat_instance() {
-            not_loaded = object_init_mat(&mut *m, shader, resource, load.clone());
-            mat_init = true;
-        }
-
-        if !mat_init {
-            let m = ob.mesh_render.as_mut().unwrap().material.clone();
-            let mut m = m.write().unwrap();
-            not_loaded = object_init_mat(&mut *m, shader, resource, load);
-        }
-
-        let mut has_instance = false;
-        let mut can_render = false;
-        let mut vertex_data_count = 0;
-
-        if let Some(m) = ob.mesh_render.as_mut().unwrap().get_mesh_instance() {
-            match object_init_mesh(m, shader) {
-                (a, b) => {
-                    can_render = a; vertex_data_count = b;
-                }
+        let init_material = |mr : &mut mesh_render::MeshRenderer| -> usize
+        {
+            if let Some(m) = mr.get_mat_instance() { 
+                return object_init_mat(m, shader, resource, load);
             }
-            has_instance = true;
-        }
 
-        if has_instance && can_render {
+            let m = &mut mr.material.write().unwrap();
+            object_init_mat(m, shader, resource, load)
+            
+        };
+
+        not_loaded = init_material(ob.mesh_render.as_mut().unwrap());
+
+        let init_mesh = |mr : &mut mesh_render::MeshRenderer|  -> (bool, usize)
+        {
+            if let Some(m) = mr.get_mesh_instance() { 
+                return object_init_mesh(m, shader);
+            }
+
+            let m = &mut mr.mesh.write().unwrap();
+            object_init_mesh(m, shader)
+        };
+
+        let (can_render, vertex_data_count) = init_mesh(ob.mesh_render.as_mut().unwrap());
+
+        if can_render {
+
+            let object_mat = ob.get_world_matrix();
+            let object_mat_world = matrix * &object_mat ;
+            shader.uniform_set("matrix", &object_mat_world);
+
+            let draw_mesh = |mr : &mut mesh_render::MeshRenderer|
             {
-                let object_mat = ob.get_world_matrix();
-                let object_mat_world = matrix * &object_mat ;
-                shader.uniform_set("matrix", &object_mat_world);
-            }
-
-            if let Some(m) = ob.mesh_render.as_mut().unwrap().get_mesh_instance() {
-                object_draw_mesh(&*m, vertex_data_count);
-            }
-        }
-        else if !has_instance {
-            let m = ob.mesh_render.as_mut().unwrap().mesh.clone();
-            let mut m = m.write().unwrap();
-            match object_init_mesh(&mut *m, shader) {
-                (a, b) => {
-                    can_render = a; vertex_data_count = b;
-                }
-            }
-
-            if can_render {
-                {
-                    let object_mat = ob.get_world_matrix();
-                    let object_mat_world = matrix * &object_mat ;
-                    shader.uniform_set("matrix", &object_mat_world);
+                if let Some(m) = mr.get_mesh_instance() { 
+                    return object_draw_mesh(m, vertex_data_count);
                 }
 
-                object_draw_mesh(&*m, vertex_data_count);
-            }
+                let m = &mut mr.mesh.write().unwrap();
+                object_draw_mesh(m, vertex_data_count);
+            };
+
+            draw_mesh(ob.mesh_render.as_mut().unwrap());
         }
 
         return not_loaded;
@@ -560,6 +547,7 @@ impl Render {
         objects : &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
         draggers : &[Arc<RwLock<object::Object>>],
+        //cameras : &[Arc<RwLock<object::Object>>],
         on_finish : &Fn(bool),
         load : Arc<Mutex<usize>>
         ) -> usize
@@ -713,9 +701,7 @@ fn prepare_passes_object(
 {
     let load = Arc::new(Mutex::new(0));
 
-    {
-        let occ = o.clone();
-        for c in occ.read().unwrap().children.iter()
+        for c in o.read().unwrap().children.iter()
         {
             prepare_passes_object(
                 c.clone(),
@@ -724,12 +710,10 @@ fn prepare_passes_object(
                 shader_manager,
                 camera.clone());
         }
-    }
 
     {
         let oc = o.clone();
         let mut occ = oc.write().unwrap();
-        let ocname = occ.name.clone();
         let render = &mut occ.mesh_render;
 
         let mat = match *render {
@@ -770,18 +754,6 @@ fn prepare_passes_object(
         }
 
     }
-
-    //done at the beginning
-    /*
-    {
-        let occ = o.clone();
-        for c in occ.read().children.iter()
-        {
-            println!("prepare child : {}", c.read().name);
-            prepare_passes_object(c.clone(), passes, material_manager.clone(), camera.clone());
-        }
-    }
-    */
 }
 
 fn create_grid(m : &mut mesh::Mesh, num : i32, space : i32)
@@ -912,14 +884,14 @@ impl GameRender {
 
     fn prepare_passes_objects_per(
         &mut self,
-        list : &[Arc<RwLock<object::Object>>])
+        obs : &[Arc<RwLock<object::Object>>])
     {
         for (_,p) in self.passes.iter_mut()
         {
             p.passes.clear();
         }
 
-        for o in list.iter() {
+        for o in obs.iter() {
             prepare_passes_object(
                 o.clone(),
                 &mut self.passes,
