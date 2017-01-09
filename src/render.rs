@@ -144,7 +144,7 @@ impl RenderPass
                     load.clone()
                     );
 
-                not_loaded = not_loaded + not;
+                not_loaded += not;
             }
         }
 
@@ -178,9 +178,6 @@ impl RenderPass
         ) -> usize
     {
         let mut not_loaded = 0;
-
-        //TODO
-        //println!("TODO rework this");
 
         if ob.mesh_render.is_none() {
             return not_loaded;
@@ -545,6 +542,7 @@ impl Render {
     pub fn draw(
         &mut self,
         objects : &[Arc<RwLock<object::Object>>],
+        cameras: &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
         draggers : &[Arc<RwLock<object::Object>>],
         //cameras : &[Arc<RwLock<object::Object>>],
