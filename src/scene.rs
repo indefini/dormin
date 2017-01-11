@@ -59,6 +59,7 @@ impl Scene
             post_read_parent_set(o.clone());
 
             if let Some(ref c) = self.camera {
+                self.cameras.push(c.clone());
                 let mut cam = c.borrow_mut();
                 let id = match cam.object_id {
                     Some(ref id) => id.clone(),
@@ -389,7 +390,7 @@ impl Encodable for Scene {
           try!(encoder.emit_struct_field( "id", 1usize, |encoder| self.id.encode(encoder)));
           try!(encoder.emit_struct_field( "objects", 2usize, |encoder| self.objects.encode(encoder)));
           try!(encoder.emit_struct_field( "camera", 3usize, |encoder| self.camera.encode(encoder)));
-          try!(encoder.emit_struct_field( "cameras", 4usize, |encoder| self.cameras.encode(encoder)));
+          //try!(encoder.emit_struct_field( "cameras", 4usize, |encoder| self.cameras.encode(encoder)));
           Ok(())
       })
   }
@@ -406,7 +407,7 @@ impl Decodable for Scene {
           //tests: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
           //camera : None //try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
           camera : try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder))),
-          cameras : try!(decoder.read_struct_field("cameras", 0, |decoder| Decodable::decode(decoder)))
+          cameras : Vec::new(),// try!(decoder.read_struct_field("cameras", 0, |decoder| Decodable::decode(decoder)))
           //camera : None
         })
     })
