@@ -295,6 +295,12 @@ impl Create for camera::Camera
 pub struct ResourceManager<T>
 {
     pub resources : HashMap<String, Arc<RwLock<ResTest<T>>>>,
+
+    //TODO new style (wip)
+    map : HashMap<String, usize>,
+    // really use arc/rwlock?
+    // rwlock just needed when resource is not done loading and we will still write.
+    res : Vec<Arc<RwLock<ResTest<T>>>>,
 }
 
 unsafe impl<T:Send> Send for ResourceManager<T> {}
@@ -307,6 +313,10 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     {
         ResourceManager {
             resources : HashMap::new(),
+
+            map : HashMap::new(),
+            res : Vec::new()
+
         }
     }
 
@@ -520,6 +530,38 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         let v : &mut ResTest<T> = &mut *va.write().unwrap();
 
         match *v 
+        {
+            ResNone | ResWait => {
+                let mt : T = Create::create(name);
+                let m = Arc::new(RwLock::new(mt));
+                m.write().unwrap().inittt();
+
+                *v = ResData(m.clone());
+                return m.clone();
+            },
+            ResData(ref yep) => {
+                return yep.clone();
+            },
+        }
+    }
+
+    pub fn request_use_no_proc_new(&mut self, name : &str) -> Arc<RwLock<T>>
+    {
+        let key = String::from(name);
+
+        let va : Arc<RwLock<ResTest<T>>> = match self.map.entry(key) {
+            Vacant(entry) => {
+                entry.insert(self.res.len());
+                let n = Arc::new(RwLock::new(ResNone));
+                self.res.push(n.clone());
+                n
+            }
+            Occupied(entry) => self.res[*entry.get()].clone(),
+        };
+
+        let v : &mut ResTest<T> = &mut *va.write().unwrap();
+
+        match *v
         {
             ResNone | ResWait => {
                 let mt : T = Create::create(name);
