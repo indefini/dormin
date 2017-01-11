@@ -397,7 +397,7 @@ impl Render {
             */
     }
 
-    fn prepare_passes(&mut self, objects : &[Arc<RwLock<object::Object>>])
+    fn clean_passes(&mut self)
     {
         for (_,p) in self.passes.iter_mut()
         {
@@ -413,8 +413,11 @@ impl Render {
                 mesh.clear_lines();
             }
         }
+    }
 
-        //self.passes.clear();
+
+    fn add_objects_to_passes(&mut self, objects : &[Arc<RwLock<object::Object>>])
+    {
         for o in objects.iter() {
             prepare_passes_object(
                 o.clone(),
@@ -545,7 +548,6 @@ impl Render {
         cameras: &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
         draggers : &[Arc<RwLock<object::Object>>],
-        //cameras : &[Arc<RwLock<object::Object>>],
         on_finish : &Fn(bool),
         load : Arc<Mutex<usize>>
         ) -> usize
@@ -564,7 +566,9 @@ impl Render {
         }
         fbo::Fbo::cgl_use_end();
 
-        self.prepare_passes(objects);
+        self.clean_passes();
+        self.add_objects_to_passes(objects);
+        self.add_objects_to_passes(cameras);
 
         self.fbo_all.read().unwrap().cgl_use();
         for p in self.passes.values()

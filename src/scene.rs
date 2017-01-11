@@ -45,14 +45,14 @@ impl Scene
     {
         let mut file = String::new();
         File::open(&Path::new(file_path)).ok().unwrap().read_to_string(&mut file);
-        let scene : Scene = json::decode(file.as_ref()).unwrap();
+        let mut scene : Scene = json::decode(file.as_ref()).unwrap();
 
         scene.post_read(resource);
 
         scene
     }
 
-    fn post_read(&self, resource : &resource::ResourceGroup)
+    fn post_read(&mut self, resource : &resource::ResourceGroup)
     {
         for o in self.objects.iter()
         {
