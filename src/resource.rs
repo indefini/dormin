@@ -45,8 +45,34 @@ pub trait ResourceT  {
 pub enum ResTest<T>
 {
     ResData(Arc<RwLock<T>>),
+    ResData2(T),
     ResWait,
     ResNone
+}
+
+impl<T:'static+Create+Sync+Send> ResTest<T> {
+
+    fn get_or_load_instant(&mut self, name : &str) -> Arc<RwLock<T>>
+    {
+        match *self
+        {
+            ResNone | ResWait => {
+                let mt : T = Create::create(name);
+                let m = Arc::new(RwLock::new(mt));
+                m.write().unwrap().inittt();
+
+                *self = ResData(m.clone());
+                return m.clone();
+            },
+            ResData(ref yep) => {
+                return yep.clone();
+            },
+            _ => {
+                panic!("yes");
+            },
+        }
+    }
+
 }
 
 pub struct ResTT<T>
@@ -89,7 +115,8 @@ impl<T> Clone for ResTT<T>
         let r = match self.resource {
             ResData(ref d) => ResData(d.clone()),
             ResWait => ResWait,
-            ResNone => ResNone
+            ResNone => ResNone,
+            ResTest::ResData2(_) => panic!("can't clone this"),
         };
 
         ResTT {
@@ -290,8 +317,6 @@ impl Create for camera::Camera
     }
 }
 
-
-
 pub struct ResourceManager<T>
 {
     pub resources : HashMap<String, Arc<RwLock<ResTest<T>>>>,
@@ -342,6 +367,9 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 ResTest::ResNone => {
                     *v = ResTest::ResWait;
                 },
+                ResTest::ResData2(ref yep) => {
+                    panic!("erase me");
+                }
             }
         }
 
@@ -412,6 +440,9 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 ResTest::ResNone => {
                     *v = ResTest::ResWait;
                 },
+                ResTest::ResData2(_) => {
+                    panic!("erase me");
+                },
             }
         }
 
@@ -479,6 +510,9 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 },
                 ResTest::ResNone => {
                     *v = ResTest::ResWait;
+                },
+                ResTest::ResData2(_) => {
+                    panic!("erase me");
                 },
             }
         }
@@ -588,7 +622,6 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     }
     */
 
-
     pub fn request_use_no_proc_old(&mut self, name : &str) -> Arc<RwLock<T>>
     {
         let key = String::from(name);
@@ -613,45 +646,63 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
             ResData(ref yep) => {
                 return yep.clone();
             },
+            ResTest::ResData2(_) => {
+                panic!("old, erase me");
+            }
         }
     }
 
     pub fn request_use_no_proc(&mut self, name : &str) -> Arc<RwLock<T>>
     {
-        self.request_use_no_proc_new(name)
+        let index = self.request_use_no_proc_new(name);
+        let r = &self.res[index];
+        r.write().unwrap().get_or_load_instant(name).clone()
     }
 
     //TODO
-    pub fn request_use_no_proc_new(&mut self, name : &str) -> Arc<RwLock<T>>
+    pub fn request_use_no_proc_new(&mut self, name : &str) -> usize
     {
         let key = String::from(name);
 
-        let va : Arc<RwLock<ResTest<T>>> = match self.map.entry(key) {
+        let (va, index) : (Arc<RwLock<ResTest<T>>>, usize) = match self.map.entry(key) {
             Vacant(entry) => {
+                let new_index = self.res.len();
                 entry.insert(self.res.len());
                 let n = Arc::new(RwLock::new(ResNone));
                 self.res.push(n.clone());
-                n
+                (n, new_index) 
             }
-            Occupied(entry) => self.res[*entry.get()].clone(),
+            Occupied(entry) => {
+                let index = *entry.get();
+                (self.res[index].clone(), index)
+            },
         };
 
         let v : &mut ResTest<T> = &mut *va.write().unwrap();
+        v.get_or_load_instant(name);
 
-        match *v
+        index
+    }
+
+    pub fn get_from_index(&self,index : usize) -> Arc<RwLock<T>>
+    {
+        let r = &self.res[index];
+        match *r.read().unwrap()
         {
             ResNone | ResWait => {
-                let mt : T = Create::create(name);
-                let m = Arc::new(RwLock::new(mt));
-                m.write().unwrap().inittt();
-
-                *v = ResData(m.clone());
-                return m.clone();
+                //TODO we should not need to panic as calling this function means you know you already
+                // loaded it, there should be be wait stuff only already loaded data to look into.
+                panic!("it is not loaded yet");
             },
             ResData(ref yep) => {
                 return yep.clone();
             },
+            _ => {
+                panic!("erase me");
+                //return yep.clone();
+            },
         }
+
     }
 }
 
@@ -707,6 +758,7 @@ pub fn resource_get<T:'static+Create+Send+Sync>(
         ResData(ref data) => {
             the_res = Some(data.clone());
         },
+        _ => panic!("erase me")
     }
 
     the_res

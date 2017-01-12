@@ -240,7 +240,8 @@ pub struct Render
     camera : Rc<RefCell<camera::Camera>>,
     camera_ortho : Rc<RefCell<camera::Camera>>,
 
-    fbo_all : Arc<RwLock<fbo::Fbo>>,
+    //fbo_all : Arc<RwLock<fbo::Fbo>>,
+    fbo_all : usize,
     fbo_selected : Arc<RwLock<fbo::Fbo>>,
 
     quad_outline : Arc<RwLock<object::Object>>,
@@ -263,7 +264,8 @@ impl Render {
                //dragger : Arc<RwLock<object::Object>>,
                ) -> Render
     {
-        let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_all");
+        //let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_all");
+        let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_all");
         let fbo_selected = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_selected");
 
         let camera_ortho = Rc::new(RefCell::new(factory.create_camera()));
@@ -357,7 +359,9 @@ impl Render {
 
     pub fn init(&mut self)
     {
-        self.fbo_all.write().unwrap().cgl_create();
+        //self.fbo_all.write().unwrap().cgl_create();
+        let fbo_all = &self.resource.fbo_manager.borrow().get_from_index(self.fbo_all);
+        fbo_all.write().unwrap().cgl_create();
         self.fbo_selected.write().unwrap().cgl_create();
     }
 
@@ -376,7 +380,9 @@ impl Render {
             let mut cam_ortho = self.camera_ortho.borrow_mut();
             cam_ortho.set_resolution(w, h);
 
-            self.fbo_all.write().unwrap().cgl_resize(w, h);
+            //self.fbo_all.write().unwrap().cgl_resize(w, h);
+            let fbo_all = &self.resource.fbo_manager.borrow().get_from_index(self.fbo_all);
+            fbo_all.write().unwrap().cgl_resize(w, h);
             self.fbo_selected.write().unwrap().cgl_resize(w, h);
         }
 
@@ -570,7 +576,9 @@ impl Render {
         self.add_objects_to_passes(objects);
         self.add_objects_to_passes(cameras);
 
-        self.fbo_all.read().unwrap().cgl_use();
+        //self.fbo_all.read().unwrap().cgl_use();
+        let fbo_all = &self.resource.fbo_manager.borrow().get_from_index(self.fbo_all);
+        fbo_all.write().unwrap().cgl_use();
         for p in self.passes.values()
         {
             let not = p.draw_frame(
