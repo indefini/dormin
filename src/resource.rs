@@ -110,7 +110,7 @@ impl <T:'static+Create+Send+Sync> ResTT<T>
         }
     }
 
-    pub fn load_instant(&mut self, manager : &mut ResourceManager<T> )
+    fn load_instant(&mut self, manager : &mut ResourceManager<T> )
     {
         match self.resource {
             ResNone | ResWait => {
@@ -320,7 +320,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn request_use(&mut self, name : &str, load : Arc<Mutex<usize>>) -> ResTest<T>
+    pub fn request_use_old(&mut self, name : &str, load : Arc<Mutex<usize>>) -> ResTest<T>
     {
         let key = String::from(name);
 
@@ -385,7 +385,78 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     }
 
-    pub fn request_use_copy_test<F>(&mut self, name : &str, on_ready : F) -> ResTest<T>
+    pub fn request_use(&mut self, name : &str, load : Arc<Mutex<usize>>) -> ResTest<T>
+    {
+        let key = String::from(name);
+
+        let va : Arc<RwLock<ResTest<T>>> = match self.map.entry(key) {
+            Vacant(entry) => {
+                entry.insert(self.res.len());
+                let n = Arc::new(RwLock::new(ResNone));
+                self.res.push(n.clone());
+                n
+            }
+            Occupied(entry) => self.res[*entry.get()].clone(),
+        };
+
+        {
+            let v : &mut ResTest<T> = &mut *va.write().unwrap();
+
+            match *v {
+                ResTest::ResData(ref yep) => {
+                    return ResTest::ResData(yep.clone());
+                },
+                ResTest::ResWait => {
+                    return ResTest::ResWait;
+                },
+                ResTest::ResNone => {
+                    *v = ResTest::ResWait;
+                },
+            }
+        }
+
+        {
+            let mut l = load.lock().unwrap();
+            *l += 1;
+            println!("      ADDING {}", *l);
+        }
+
+        let s = String::from(name);
+
+        let (tx, rx) = channel::<Arc<RwLock<T>>>();
+        let guard = thread::spawn(move || {
+            //thread::sleep(::std::time::Duration::seconds(5));
+            //thread::sleep_ms(5000);
+            let mt : T = Create::create(s.as_ref());
+            let m = Arc::new(RwLock::new(mt));
+            m.write().unwrap().inittt();
+            let result = tx.send(m.clone());
+        });
+
+        //let result = guard.join();
+
+        thread::spawn( move || {
+            loop {
+                match rx.try_recv() {
+                    Err(_) => {},
+                    Ok(value) =>  { 
+                        let entry = &mut *va.write().unwrap();
+                        *entry = ResTest::ResData(value.clone());
+                        let mut l = load.lock().unwrap();
+                        *l -= 1;
+                        println!("      SUBBBBBB {}", *l);
+                        break; }
+                }
+            }
+        });
+
+        return ResTest::ResWait;
+
+
+    }
+
+
+    pub fn arequest_use_copy_test<F>(&mut self, name : &str, on_ready : F) -> ResTest<T>
         //where F : Fn(), F:Send +'static
         where F : Fn() + Send + 'static + Sync
     {
@@ -518,7 +589,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     */
 
 
-    pub fn request_use_no_proc(&mut self, name : &str) -> Arc<RwLock<T>>
+    pub fn request_use_no_proc_old(&mut self, name : &str) -> Arc<RwLock<T>>
     {
         let key = String::from(name);
 
@@ -545,6 +616,12 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
+    pub fn request_use_no_proc(&mut self, name : &str) -> Arc<RwLock<T>>
+    {
+        self.request_use_no_proc_new(name)
+    }
+
+    //TODO
     pub fn request_use_no_proc_new(&mut self, name : &str) -> Arc<RwLock<T>>
     {
         let key = String::from(name);
