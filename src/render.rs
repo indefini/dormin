@@ -241,7 +241,7 @@ pub struct Render
     camera_ortho : Rc<RefCell<camera::Camera>>,
 
     //fbo_all : Arc<RwLock<fbo::Fbo>>,
-    fbo_all : usize,
+    fbo_all : resource::State,
     fbo_selected : Arc<RwLock<fbo::Fbo>>,
 
     quad_outline : Arc<RwLock<object::Object>>,
@@ -360,8 +360,10 @@ impl Render {
     pub fn init(&mut self)
     {
         //self.fbo_all.write().unwrap().cgl_create();
-        let fbo_all = &self.resource.fbo_manager.borrow().get_from_index(self.fbo_all);
-        fbo_all.write().unwrap().cgl_create();
+        let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
+        let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
+        //fbo_all.write().unwrap().cgl_create();
+        fbo_all.cgl_create();
         self.fbo_selected.write().unwrap().cgl_create();
     }
 
@@ -381,8 +383,11 @@ impl Render {
             cam_ortho.set_resolution(w, h);
 
             //self.fbo_all.write().unwrap().cgl_resize(w, h);
-            let fbo_all = &self.resource.fbo_manager.borrow().get_from_index(self.fbo_all);
-            fbo_all.write().unwrap().cgl_resize(w, h);
+            //let fbo_all = &self.resource.fbo_manager.borrow().get_from_state(self.fbo_all);
+            //fbo_all.write().unwrap().cgl_resize(w, h);
+            let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
+            let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
+            fbo_all.cgl_resize(w, h);
             self.fbo_selected.write().unwrap().cgl_resize(w, h);
         }
 
@@ -576,9 +581,14 @@ impl Render {
         self.add_objects_to_passes(objects);
         self.add_objects_to_passes(cameras);
 
+        {
         //self.fbo_all.read().unwrap().cgl_use();
-        let fbo_all = &self.resource.fbo_manager.borrow().get_from_index(self.fbo_all);
-        fbo_all.write().unwrap().cgl_use();
+        //let fbo_all = &self.resource.fbo_manager.borrow().get_from_state(self.fbo_all);
+        //fbo_all.write().unwrap().cgl_use();
+        
+        let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
+        let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
+        fbo_all.cgl_use();
         for p in self.passes.values()
         {
             let not = p.draw_frame(
@@ -589,6 +599,7 @@ impl Render {
             not_loaded = not_loaded + not;
         }
         fbo::Fbo::cgl_use_end();
+        }
 
         /*
         for p in self.passes.values()
@@ -989,16 +1000,33 @@ fn object_init_mat(
                 }
             },
             material::Sampler::Fbo(ref mut fbo, ref attachment) => {
+                /*
                 let yep = resource::resource_get(&mut *resource.fbo_manager.borrow_mut(), fbo, load.clone());
                 match yep {
                     Some(yoyo) => {
-                        let fc = yoyo.clone();
-                        let fff = fc.read().unwrap();
+                        let fff = yoyo.read().unwrap();
                         let fbosamp = uniform::FboSampler { 
                             fbo : & *fff,
                             attachment : *attachment
                         };
-                        //shader.texture_set(name.as_ref(), & *yoyo.read().unwrap(),i);
+                        shader.texture_set(name.as_ref(), &fbosamp,i);
+                        i = i +1;
+                    },
+                    None => {
+                        not_loaded = not_loaded +1;
+                    }
+                }
+                */
+                //let yep = resource::resource_get(&mut *resource.fbo_manager.borrow_mut(), fbo, load.clone());
+                let mut rm = resource.fbo_manager.borrow_mut();
+                let yep = rm.get_or_create(fbo.name.as_str());
+                match yep {
+                    Some(yoyo) => {
+                        let fbosamp = uniform::FboSampler { 
+                            //fbo : & *fff,
+                            fbo : yoyo,
+                            attachment : *attachment
+                        };
                         shader.texture_set(name.as_ref(), &fbosamp,i);
                         i = i +1;
                     },

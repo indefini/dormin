@@ -73,12 +73,34 @@ impl<T:'static+Create+Sync+Send> ResTest<T> {
         }
     }
 
+    fn get_or_load_instant_no_arc(&mut self, name : &str)
+    {
+        match *self
+        {
+            ResNone | ResWait => {
+                let mut m : T = Create::create(name);
+                m.inittt();
+
+                *self = ResTest::ResData2(m);
+                //return &m;
+            },
+            ResTest::ResData2(ref yep) => {
+                //return yep;
+            },
+            _ => {
+                panic!("yes");
+            },
+        }
+    }
+
+
 }
 
 pub struct ResTT<T>
 {
     pub name : String,
     pub resource : ResTest<T>,
+    pub state : Option<State>
 }
 
 impl<T:Create+Send+Sync+'static> ResTT<T>
@@ -87,7 +109,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
     {
         ResTT {
             name : String::from(name),
-            resource : ResTest::ResNone
+            resource : ResTest::ResNone,
+            state : None
         }
     }
 
@@ -103,7 +126,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
     {
         ResTT {
             name : String::from(name),
-            resource : res
+            resource : res,
+            state : None
         }
     }
 }
@@ -121,7 +145,8 @@ impl<T> Clone for ResTT<T>
 
         ResTT {
             name : self.name.clone(),
-            resource : r
+            resource : r,
+            state : None
         }
     }
 }
@@ -317,15 +342,34 @@ impl Create for camera::Camera
     }
 }
 
+#[derive(Clone,Copy)]
+pub enum State
+{
+    Loading(usize),
+    Using(usize),
+}
+
+impl State
+{
+    fn index(&self) -> usize
+    {
+        match *self {
+            State::Loading(i) => i,
+            State::Using(i) => i
+        }
+    }
+}
+
 pub struct ResourceManager<T>
 {
     pub resources : HashMap<String, Arc<RwLock<ResTest<T>>>>,
 
     //TODO new style (wip)
-    map : HashMap<String, usize>,
+    map : HashMap<String, State>,
     // really use arc/rwlock?
     // rwlock just needed when resource is not done loading and we will still write.
     res : Vec<Arc<RwLock<ResTest<T>>>>,
+    loaded : Vec<T>,
 }
 
 unsafe impl<T:Send> Send for ResourceManager<T> {}
@@ -340,8 +384,8 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
             resources : HashMap::new(),
 
             map : HashMap::new(),
-            res : Vec::new()
-
+            res : Vec::new(),
+            loaded : Vec::new()
         }
     }
 
@@ -419,12 +463,13 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
         let va : Arc<RwLock<ResTest<T>>> = match self.map.entry(key) {
             Vacant(entry) => {
-                entry.insert(self.res.len());
+                let index = self.res.len();
+                entry.insert(State::Loading(index));
                 let n = Arc::new(RwLock::new(ResNone));
                 self.res.push(n.clone());
                 n
             }
-            Occupied(entry) => self.res[*entry.get()].clone(),
+            Occupied(entry) => self.res[entry.get().index()].clone(),
         };
 
         {
@@ -654,35 +699,48 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn request_use_no_proc(&mut self, name : &str) -> Arc<RwLock<T>>
     {
-        let index = self.request_use_no_proc_new(name);
-        let r = &self.res[index];
-        r.write().unwrap().get_or_load_instant(name).clone()
+        self.request_use_no_proc_old(name)
     }
 
+
+    /*
+    pub fn request_use_no_proc_no_arc(&mut self, name : &str) -> &T
+    {
+        let index = self.request_use_no_proc_new(name);
+
+        match *self.res[index].read().unwrap
+        {
+            ResTest::ResData2(ref yep) => {
+                yep
+            },
+            _ => {
+                panic!("yes");
+            },
+        }
+    }
+    */
+
     //TODO
-    pub fn request_use_no_proc_new(&mut self, name : &str) -> usize
+    pub fn request_use_no_proc_new(&mut self, name : &str) -> State
     {
         let key = String::from(name);
 
-        let (va, index) : (Arc<RwLock<ResTest<T>>>, usize) = match self.map.entry(key) {
+        match self.map.entry(key) {
             Vacant(entry) => {
-                let new_index = self.res.len();
-                entry.insert(self.res.len());
-                let n = Arc::new(RwLock::new(ResNone));
-                self.res.push(n.clone());
-                (n, new_index) 
+                let s = State::Using(self.loaded.len());
+                entry.insert(s);
+
+                let mut m : T = Create::create(name);
+                m.inittt();
+                self.loaded.push(m);
+                s
             }
             Occupied(entry) => {
-                let index = *entry.get();
-                (self.res[index].clone(), index)
+                *entry.get()
             },
-        };
-
-        let v : &mut ResTest<T> = &mut *va.write().unwrap();
-        v.get_or_load_instant(name);
-
-        index
+        }
     }
+
 
     pub fn get_from_index(&self,index : usize) -> Arc<RwLock<T>>
     {
@@ -703,6 +761,37 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
             },
         }
 
+    }
+
+    pub fn get_from_state(&mut self, state : State) -> &mut T
+    {
+        match state
+        {
+            State::Using(i) =>
+                &mut self.loaded[i],
+            _ => {
+                panic!("erase me");
+                //return yep.clone();
+            },
+        }
+    }
+
+    pub fn get_res(&mut self, state : State) -> Option<&mut T>
+    {
+        match state
+        {
+            State::Using(i) =>
+                Some(&mut self.loaded[i]),
+            _ => {
+                 None
+            },
+        }
+    }
+
+    pub fn get_or_create(&mut self, name : &str) -> Option<&mut T>
+    {
+        let state = self.request_use_no_proc_new(name);
+        self.get_res(state)
     }
 }
 
@@ -731,6 +820,7 @@ impl<T> Decodable for ResTT<T> {
                 ResTT{
                     name : try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
                     resource : ResNone,
+                    state : None,
                 }
               )
         })
