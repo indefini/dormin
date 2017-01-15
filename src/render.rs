@@ -241,8 +241,9 @@ pub struct Render
     camera_ortho : Rc<RefCell<camera::Camera>>,
 
     //fbo_all : Arc<RwLock<fbo::Fbo>>,
+    //fbo_selected : Arc<RwLock<fbo::Fbo>>,
     fbo_all : resource::State,
-    fbo_selected : Arc<RwLock<fbo::Fbo>>,
+    fbo_selected : resource::State,
 
     quad_outline : Arc<RwLock<object::Object>>,
     quad_all : Arc<RwLock<object::Object>>,
@@ -266,7 +267,7 @@ impl Render {
     {
         //let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_all");
         let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_all");
-        let fbo_selected = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_selected");
+        let fbo_selected = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_selected");
 
         let camera_ortho = Rc::new(RefCell::new(factory.create_camera()));
         {
@@ -361,10 +362,14 @@ impl Render {
     {
         //self.fbo_all.write().unwrap().cgl_create();
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
-        let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
-        //fbo_all.write().unwrap().cgl_create();
-        fbo_all.cgl_create();
-        self.fbo_selected.write().unwrap().cgl_create();
+        {
+            let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
+            //fbo_all.write().unwrap().cgl_create();
+            fbo_all.cgl_create();
+        }
+
+        let fbo_sel = fbo_mgr.get_from_state(self.fbo_selected);
+        fbo_sel.cgl_create();
     }
 
     pub fn resize(&mut self, w : c_int, h : c_int)
@@ -386,9 +391,14 @@ impl Render {
             //let fbo_all = &self.resource.fbo_manager.borrow().get_from_state(self.fbo_all);
             //fbo_all.write().unwrap().cgl_resize(w, h);
             let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
-            let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
-            fbo_all.cgl_resize(w, h);
-            self.fbo_selected.write().unwrap().cgl_resize(w, h);
+            {
+                let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
+                fbo_all.cgl_resize(w, h);
+                //    self.fbo_selected.write().unwrap().cgl_resize(w, h);
+            }
+
+            let fbo_sel = fbo_mgr.get_from_state(self.fbo_selected);
+            fbo_sel.cgl_resize(w,h);
         }
 
         self.resolution_set(w,h);
@@ -565,7 +575,12 @@ impl Render {
     {
         let mut not_loaded = 0;
         self.prepare_passes_selected(selected);
-        self.fbo_selected.read().unwrap().cgl_use();
+        //self.fbo_selected.read().unwrap().cgl_use();
+        {
+        let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
+        let fbo_sel = fbo_mgr.get_from_state(self.fbo_selected);
+        fbo_sel.cgl_use();
+        }
         for p in self.passes.values()
         {
             let not = p.draw_frame(
