@@ -336,20 +336,26 @@ impl<T> State<T>
     }
     */
 
-    fn finalize(&mut self) -> bool
+    fn finalize(& self) -> (bool, Option<T>)
     {
-        false
-            /*
-        match self {
-            Loading(l) => {
-                let finished = l.read().unwrap() == ResData;
-                if finished {
-                    l.
+        match *self {
+            State::Loading(ref l) => {
+                let is_some = {
+                    let v : &Option<T> = &*l.read().unwrap();
+                    v.is_some()
+                };
+
+                if is_some {
+                    return (true, l.write().unwrap().take());
+                }
+                else {
+                    (true, None)
                 }
             },
-            _ -> {}
+            _ => {
+                (false, None)
+            }
         }
-        */
     }
 }
 
@@ -550,29 +556,19 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
             }
             Occupied(entry) => {
                 let i = *entry.get();
-                match self.loaded[i] {
-                    State::Loading(ref l) => {
-                        let is_some = {
-                            let v : &Option<T> = &*l.read().unwrap();
-                            v.is_some()
-                        };
+                let li = &mut self.loaded[i];
+                let (was_loading, op) = li.finalize();
+                if was_loading {
+                    if let Some(s) = op {
+                        *li = State::Using(s);
+                    }
+                }
 
-                        if is_some {
-                            self.loaded[i] = State::Using(l.into_inner().unwrap().unwrap());
-                            match self.loaded[i] {
-                                State::Using(ref u) => {
-                                    return (i, Some(u));
-                                }
-                                _ => {panic!("never come here");}
-                            }
-                        }
-                        else {
-                            return (i, None);
-                        }
-                    },
+                match *li {
                     State::Using(ref u) => {
                         return (i, Some(u));
                     }
+                    _ => {return (i, None); }
                 }
             }
         };
@@ -589,7 +585,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         let guard = thread::spawn(move || {
             //thread::sleep(::std::time::Duration::seconds(5));
             //thread::sleep_ms(5000);
-            let m : T = Create::create(s.as_ref());
+            let mut m : T = Create::create(s.as_ref());
             m.inittt();
             let result = tx.send(m);
         });
@@ -821,7 +817,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     pub fn get_from_index2(&mut self,index : usize) -> &mut T
     {
         match self.loaded[index] {
-            State::Loading(l) => {
+            State::Loading(_) => {
                 panic!("should return an option");
             },
             State::Using(ref mut u) => {
