@@ -242,8 +242,8 @@ pub struct Render
 
     //fbo_all : Arc<RwLock<fbo::Fbo>>,
     //fbo_selected : Arc<RwLock<fbo::Fbo>>,
-    fbo_all : resource::State,
-    fbo_selected : resource::State,
+    fbo_all : usize,
+    fbo_selected : usize,
 
     quad_outline : Arc<RwLock<object::Object>>,
     quad_all : Arc<RwLock<object::Object>>,
@@ -363,12 +363,12 @@ impl Render {
         //self.fbo_all.write().unwrap().cgl_create();
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
         {
-            let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
+            let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
             //fbo_all.write().unwrap().cgl_create();
             fbo_all.cgl_create();
         }
 
-        let fbo_sel = fbo_mgr.get_from_state(self.fbo_selected);
+        let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
         fbo_sel.cgl_create();
     }
 
@@ -392,12 +392,12 @@ impl Render {
             //fbo_all.write().unwrap().cgl_resize(w, h);
             let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
             {
-                let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
+                let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
                 fbo_all.cgl_resize(w, h);
                 //    self.fbo_selected.write().unwrap().cgl_resize(w, h);
             }
 
-            let fbo_sel = fbo_mgr.get_from_state(self.fbo_selected);
+            let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
             fbo_sel.cgl_resize(w,h);
         }
 
@@ -578,7 +578,7 @@ impl Render {
         //self.fbo_selected.read().unwrap().cgl_use();
         {
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
-        let fbo_sel = fbo_mgr.get_from_state(self.fbo_selected);
+        let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
         fbo_sel.cgl_use();
         }
         for p in self.passes.values()
@@ -602,7 +602,7 @@ impl Render {
         //fbo_all.write().unwrap().cgl_use();
         
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
-        let fbo_all = fbo_mgr.get_from_state(self.fbo_all);
+        let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
         fbo_all.cgl_use();
         for p in self.passes.values()
         {
