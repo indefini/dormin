@@ -370,6 +370,11 @@ pub struct ResourceManager<T>
     // rwlock just needed when resource is not done loading and we will still write.
     res : Vec<Arc<RwLock<ResTest<T>>>>,
     loaded : Vec<T>,
+
+    //TODO
+    //map : HashMap<String, usize>, => saves index to ids, and id never change
+    //ids : Vec<State>,
+    //next_id : usize
 }
 
 unsafe impl<T:Send> Send for ResourceManager<T> {}
@@ -530,6 +535,95 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
 
     }
+
+    /*
+    pub fn request_use_new(&mut self, name : &str, load : Arc<Mutex<usize>>) -> (State, Option<&T)
+    {
+        let key = String::from(name);
+
+        let va : Arc<RwLock<ResTest<T>>> = match self.map.entry(key) {
+            Vacant(entry) => {
+                let index = self.res.len();
+                entry.insert(State::Loading(index));
+                let n = Arc::new(RwLock::new(ResNone));
+                self.res.push(n.clone());
+                n
+            }
+            Occupied(entry) => {
+                let s = match entry.get();
+
+                match s {
+                    State::Loading(i) => {
+                        let r = self.res[i];
+                        //self.res[entry.get().index()].clone()
+                        r
+                    },
+                    State::Using(i) => {
+                        return (s, &mut self.loaded[i]);
+                    }
+                }
+            }
+        };
+
+        {
+            let v : &mut ResTest<T> = &mut *va.write().unwrap();
+
+            match *v {
+                ResTest::ResData(ref yep) => {
+                    return ResTest::ResData(yep.clone());
+                },
+                ResTest::ResWait => {
+                    return ResTest::ResWait;
+                },
+                ResTest::ResNone => {
+                    *v = ResTest::ResWait;
+                },
+                ResTest::ResData2(_) => {
+                    panic!("erase me");
+                },
+            }
+        }
+
+        {
+            let mut l = load.lock().unwrap();
+            *l += 1;
+            println!("      ADDING {}", *l);
+        }
+
+        let s = String::from(name);
+
+        let (tx, rx) = channel::<Arc<RwLock<T>>>();
+        let guard = thread::spawn(move || {
+            //thread::sleep(::std::time::Duration::seconds(5));
+            //thread::sleep_ms(5000);
+            let mt : T = Create::create(s.as_ref());
+            let m = Arc::new(RwLock::new(mt));
+            m.write().unwrap().inittt();
+            let result = tx.send(m.clone());
+        });
+
+        //let result = guard.join();
+
+        thread::spawn( move || {
+            loop {
+                match rx.try_recv() {
+                    Err(_) => {},
+                    Ok(value) =>  { 
+                        let entry = &mut *va.write().unwrap();
+                        *entry = ResTest::ResData(value.clone());
+                        let mut l = load.lock().unwrap();
+                        *l -= 1;
+                        println!("      SUBBBBBB {}", *l);
+                        break; }
+                }
+            }
+        });
+
+        return ResTest::ResWait;
+
+
+    }
+*/
 
 
     pub fn arequest_use_copy_test<F>(&mut self, name : &str, on_ready : F) -> ResTest<T>
