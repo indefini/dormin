@@ -88,21 +88,20 @@ impl CameraPass
 struct RenderPass
 {
     pub name : String,
-    //pub material : Arc<sync::RwLock<material::Material>>,
-    pub shader : Arc<sync::RwLock<shader::Shader>>,
-    //pub camera : Rc<RefCell<camera::Camera>>,
+    //pub shader : Arc<RwLock<shader::Shader>>,
+    pub shader : ResTT<shader::Shader>,
     pub passes : HashMap<uuid::Uuid, Box<CameraPass>>,
 }
 
 impl RenderPass
 {
     pub fn new(
-        shader : Arc<RwLock<shader::Shader>>,
+        shader : usize, //Arc<RwLock<shader::Shader>>,
         camera : Rc<RefCell<camera::Camera>>) -> RenderPass
     {
         RenderPass {
                   name : String::from("passtest"),
-                  shader : shader.clone(),
+                  shader : shader,//.clone(),
                   //camera : camera,
                   passes : HashMap::new()
               }
@@ -772,7 +771,7 @@ fn prepare_passes_object(
         };
 
         {
-            let key = shader.read().unwrap().name.clone();
+            let key = shader.name.clone();
             let rp = match passes.entry(key) {
                 Vacant(entry) => 
                     entry.insert(box RenderPass::new(shader.clone(), camera.clone())),

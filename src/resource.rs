@@ -24,20 +24,6 @@ use std::cell::RefCell;
 use uuid;
 
 
-/*
-//#[deriving(Decodable, Encodable)]
-pub enum Resource {
-    Mesh(mesh::Mesh),
-    //Shader(shader::Material)
-}
-
-pub struct ResourceS
-{
-    state : int,
-    data : Resource
-}
-*/
-
 pub trait ResourceT  {
     fn init(&mut self);
 }
@@ -73,7 +59,8 @@ impl<T:'static+Create+Sync+Send> ResTest<T> {
 pub struct ResTT<T>
 {
     pub name : String,
-    pub resource : ResTest<T>,
+    pub resource : Option<usize>,
+    pub instance : Option<T>,
 }
 
 impl<T:Create+Send+Sync+'static> ResTT<T>
@@ -82,7 +69,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
     {
         ResTT {
             name : String::from(name),
-            resource : ResTest::ResNone,
+            resource : None,
+            instance : None
         }
     }
 
@@ -94,11 +82,12 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         r
     }
 
-    pub fn new_with_res(name : &str, res : ResTest<T>) -> ResTT<T>
+    pub fn new_with_res(name : &str, res : T) -> ResTT<T>
     {
         ResTT {
             name : String::from(name),
-            resource : res,
+            resource : None,
+            instance : Some(res),
         }
     }
 }
@@ -107,67 +96,34 @@ impl<T> Clone for ResTT<T>
 {
     fn clone(&self) -> ResTT<T>
     {
-        let r = match self.resource {
-            ResData(ref d) => ResData(d.clone()),
-            ResWait => ResWait,
-            ResNone => ResNone,
-        };
-
         ResTT {
             name : self.name.clone(),
-            resource : r,
+            resource : self.resource.clone(),
+            instance : None //TODO
         }
     }
 }
 
 impl <T:'static+Create+Send+Sync> ResTT<T>
 {
-    pub fn get_resource(&mut self, manager : &mut ResourceManager<T>, load : Arc<Mutex<usize>> ) -> Option<Arc<RwLock<T>>>
+    pub fn get_resource<'a>(&mut self, manager : &'a mut ResourceManager<T>, load : Arc<Mutex<usize>> ) -> Option<&'a mut T>
     {
-        match self.resource {
-            ResTest::ResData(ref rd) => Some(rd.clone()),
-            //ResTest::ResWait => None,
-            _ => resource_get(manager, self, load)
-        }
+        resource_get(manager, self, load)
     }
 
     fn load_instant(&mut self, manager : &mut ResourceManager<T> )
     {
-        match self.resource {
-            ResNone | ResWait => {
-                let data = manager.request_use_no_proc(self.name.as_ref());
-                self.resource = ResTest::ResData(data);
-            },
-            _ => {}
-        }
+        self.resource = Some(manager.request_use_no_proc_new(self.name.as_ref()));
     }
 
     pub fn load_instant_no_manager(&mut self)
     {
-        match self.resource {
-            ResNone | ResWait => {
-                let mut mt : T = Create::create(self.name.as_ref());
-                mt.inittt();
-                let data = Arc::new(RwLock::new(mt));
-                self.resource = ResTest::ResData(data);
-            },
-            _ => {}
+        if self.instance.is_none() {
+            let mut mt : T = Create::create(self.name.as_ref());
+            mt.inittt();
+            self.instance = Some(mt);
         }
     }
-
-
-    pub fn get_resource_instant(&mut self, manager : &mut ResourceManager<T> ) -> Arc<RwLock<T>>
-    {
-        match self.resource {
-            ResTest::ResData(ref rd) => rd.clone(),
-            _ => {
-                let data = manager.request_use_no_proc(self.name.as_ref());
-                self.resource = ResTest::ResData(data.clone());
-                data
-            }
-        }
-    }
-
 }
 
 pub trait Create
@@ -542,7 +498,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     }
     */
 
-    pub fn request_use_new(&mut self, name : &str, load : Arc<Mutex<usize>>) -> (usize, Option<&T>)
+    pub fn request_use_new(&mut self, name : &str, load : Arc<Mutex<usize>>) -> (usize, Option<&mut T>)
     {
         let key = String::from(name);
 
@@ -565,7 +521,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 }
 
                 match *li {
-                    State::Using(ref u) => {
+                    State::Using(ref mut u) => {
                         return (i, Some(u));
                     }
                     _ => {return (i, None); }
@@ -858,13 +814,15 @@ impl<T> Decodable for ResTT<T> {
             Ok(
                 ResTT{
                     name : try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-                    resource : ResNone,
+                    resource : None,
+                    instance : None
                 }
               )
         })
     }
 }
 
+/*
 pub fn resource_get<T:'static+Create+Send+Sync>(
     manager : &mut ResourceManager<T>,
     res: &mut ResTT<T>,
@@ -890,6 +848,25 @@ pub fn resource_get<T:'static+Create+Send+Sync>(
 
     the_res
 }
+*/
+
+pub fn resource_get<'a, T:'static+Create+Send+Sync>(
+    manager : &'a mut ResourceManager<T>,
+    res: &mut ResTT<T>,
+    load : Arc<Mutex<usize>>
+    )
+    -> Option<&'a mut T>
+{
+    if let Some(i) = res.resource {
+        Some(manager.get_from_index2(i))
+    }
+    else {
+        let (i, r) = manager.request_use_new(res.name.as_ref(), load);
+        res.resource = Some(i);
+        r
+    }
+}
+
 
 pub struct ResourceGroup
 {
