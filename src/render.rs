@@ -8,6 +8,7 @@ use std::collections::hash_map::Entry::{Occupied,Vacant};
 use uuid;
 
 use resource;
+use resource::ResTT;
 use shader;
 use material;
 use mesh;
@@ -96,7 +97,7 @@ struct RenderPass
 impl RenderPass
 {
     pub fn new(
-        shader : usize, //Arc<RwLock<shader::Shader>>,
+        shader : ResTT<shader::Shader>, //Arc<RwLock<shader::Shader>>,
         camera : Rc<RefCell<camera::Camera>>) -> RenderPass
     {
         RenderPass {
@@ -113,7 +114,8 @@ impl RenderPass
         load : Arc<Mutex<usize>>
         ) -> usize
     {
-        let shader = &mut *self.shader.write().unwrap();
+        //let shader = &mut *self.shader.write().unwrap();
+        let shader = self.shader.get_from_manager_instant(&mut *resource.shader_manager.borrow_mut()).unwrap();
 
         if shader.state == 0 {
             shader.read();
@@ -774,7 +776,7 @@ fn prepare_passes_object(
             let key = shader.name.clone();
             let rp = match passes.entry(key) {
                 Vacant(entry) => 
-                    entry.insert(box RenderPass::new(shader.clone(), camera.clone())),
+                    entry.insert(box RenderPass::new(shader_yep.clone(), camera.clone())),
                 Occupied(entry) => entry.into_mut(),
             };
 

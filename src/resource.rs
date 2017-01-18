@@ -90,6 +90,34 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
             instance : Some(res),
         }
     }
+
+    pub fn get_from_manager<'a>(&mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
+    {
+        if let Some(i) = self.resource {
+            rm.get_from_index3(i)
+        }
+        else {
+            //TODO
+            //let (i, r) = rm.request_use_new(self.name.as_ref(), load);
+            //self.resource = Some(i);
+            //r
+            None
+        }
+    }
+
+    pub fn get_from_manager_instant<'a> (&mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
+    {
+        let i = if let Some(i) = self.resource {
+            i
+        }
+        else {
+            let i = rm.request_use_no_proc_new(self.name.as_ref());
+            self.resource = Some(i);
+            i
+        };
+
+        rm.get_from_index3(i)
+    }
 }
 
 impl<T> Clone for ResTT<T>
@@ -782,6 +810,17 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
+    pub fn get_from_index3(&mut self,index : usize) -> Option<&mut T>
+    {
+        match self.loaded[index] {
+            State::Loading(_) => {
+                None
+            },
+            State::Using(ref mut u) => {
+                Some(u)
+            }
+        }
+    }
 
     pub fn get_or_create(&mut self, name : &str) -> Option<&mut T>
     {
@@ -858,7 +897,7 @@ pub fn resource_get<'a, T:'static+Create+Send+Sync>(
     -> Option<&'a mut T>
 {
     if let Some(i) = res.resource {
-        Some(manager.get_from_index2(i))
+        manager.get_from_index3(i)
     }
     else {
         let (i, r) = manager.request_use_new(res.name.as_ref(), load);
