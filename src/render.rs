@@ -115,7 +115,8 @@ impl RenderPass
         ) -> usize
     {
         //let shader = &mut *self.shader.write().unwrap();
-        let shader = self.shader.get_from_manager_instant(&mut *resource.shader_manager.borrow_mut()).unwrap();
+        let shader_manager = &mut *resource.shader_manager.borrow_mut();
+        let shader = self.shader.get_from_manager_instant(shader_manager).unwrap();
 
         if shader.state == 0 {
             shader.read();
@@ -190,9 +191,11 @@ impl RenderPass
                 return object_init_mat(m, shader, resource, load);
             }
 
-            let m = &mut mr.material.write().unwrap();
+            //let m = &mut mr.material.write().unwrap();
+            let material_manager = &mut *resource.material_manager.borrow_mut();
+            let m = mr.material.get(material_manager).unwrap();
+
             object_init_mat(m, shader, resource, load)
-            
         };
 
         not_loaded = init_material(ob.mesh_render.as_mut().unwrap());
@@ -203,7 +206,9 @@ impl RenderPass
                 return object_init_mesh(m, shader);
             }
 
-            let m = &mut mr.mesh.write().unwrap();
+            //let m = &mut mr.mesh.write().unwrap();
+            let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
+            let m = mr.mesh.get(mesh_manager).unwrap();
             object_init_mesh(m, shader)
         };
 
@@ -221,7 +226,9 @@ impl RenderPass
                     return object_draw_mesh(m, vertex_data_count);
                 }
 
-                let m = &mut mr.mesh.write().unwrap();
+                //let m = &mut mr.mesh.write().unwrap();
+                let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
+                let m = mr.mesh.get(mesh_manager).unwrap();
                 object_draw_mesh(m, vertex_data_count);
             };
 
@@ -303,8 +310,9 @@ impl Render {
         let material_manager = &resource.material_manager;
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            create_grid(&mut *m.write().unwrap(), 100i32, 1i32);
+            //let m = Arc::new(RwLock::new(mesh::Mesh::new()));
+            let mut m = mesh::Mesh::new();
+            create_grid(&mut m, 100i32, 1i32);
 
             let mere = mesh_render::MeshRenderer::new_with_mesh(
                 m,
@@ -314,8 +322,9 @@ impl Render {
         }
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            create_repere(&mut *m.write().unwrap(), 40f64 );
+            //let m = Arc::new(RwLock::new(mesh::Mesh::new()));
+            let mut m = mesh::Mesh::new();
+            create_repere(&mut m, 40f64 );
 
             let mere = mesh_render::MeshRenderer::new_with_mesh(
                 m,
@@ -325,8 +334,8 @@ impl Render {
         }
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            m.write().unwrap().add_quad(1f32, 1f32);
+            let mut m = mesh::Mesh::new();
+            m.add_quad(1f32, 1f32);
 
             shader_manager.borrow_mut().request_use_no_proc("shader/outline.sh");
             let outline_mat = material_manager.borrow_mut().request_use_no_proc("material/outline.mat");
@@ -336,8 +345,8 @@ impl Render {
         }
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            m.write().unwrap().add_quad(1f32, 1f32);
+            let mut m = mesh::Mesh::new();
+            m.add_quad(1f32, 1f32);
 
             //shader_manager.write().unwrap().request_use_no_proc("shader/all.sh");
             let all_mat = material_manager.borrow_mut().request_use_no_proc("material/fbo_all.mat");
@@ -347,8 +356,7 @@ impl Render {
         }
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-
+            let m = mesh::Mesh::new();
             let mere = mesh_render::MeshRenderer::new_with_mesh(
                 m,
                 "material/line.mat",
@@ -999,10 +1007,11 @@ fn object_init_mat(
     for (name,t) in material.textures.iter_mut() {
         match *t {
             material::Sampler::ImageFile(ref mut img) => {
-                let r = resource::resource_get(&mut *resource.texture_manager.borrow_mut(), img, load.clone());
+                let texture_manager = &mut *resource.texture_manager.borrow_mut();
+                let r = resource::resource_get(texture_manager, img, load.clone());
                 match r {
-                    Some(t) => {
-                        let mut tex = t.write().unwrap();
+                    Some(tex) => {
+                        //let mut tex = t.write().unwrap();
                         if tex.state == 1 {
                             tex.init();
                         }

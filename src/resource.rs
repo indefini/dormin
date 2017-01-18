@@ -74,6 +74,15 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         }
     }
 
+    pub fn new_with_instance(name : &str, r : T) -> ResTT<T>
+    {
+        ResTT {
+            name : String::from(name),
+            resource : None,
+            instance : Some(r)
+        }
+    }
+
     pub fn new_instant(name : &str, rm : &mut ResourceManager<T>) -> ResTT<T>
     {
         let mut r = ResTT::new(name);
@@ -105,19 +114,32 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         }
     }
 
-    pub fn get_from_manager_instant<'a> (&mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
+    pub fn get_from_manager_instant<'a> (&self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
     {
         let i = if let Some(i) = self.resource {
             i
         }
         else {
             let i = rm.request_use_no_proc_new(self.name.as_ref());
-            self.resource = Some(i);
+            println!("warning !!!! this file gets requested everytime");
+            //self.resource = Some(i);
             i
         };
 
         rm.get_from_index3(i)
     }
+
+    pub fn get<'a>(&mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
+    {
+        if let Some(i) = self.resource {
+            rm.get_from_index3(i)
+        }
+        else {
+            println!("warning !!!!, resource not loaded yet");
+            None
+        }
+    }
+
 }
 
 impl<T> Clone for ResTT<T>
