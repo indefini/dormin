@@ -212,17 +212,20 @@ impl Object
             None => return
         };
 
-        render.material.write().unwrap().set_uniform_data(name, data);
+        //render.material.write().unwrap().set_uniform_data(name, data);
+        render.material.get_instance().unwrap().set_uniform_data(name, data);
     }
 
-    pub fn get_material(&self) -> Option<Arc<RwLock<material::Material>>>
+    //pub fn get_material(&self) -> Option<Arc<RwLock<material::Material>>>
+    pub fn get_material(&self) -> Option<&mut material::Material>
     {
         let render = match self.mesh_render {
             Some(ref r) => r,
             None => return None
         };
 
-        Some(render.material.clone())
+        //Some(render.material.clone())
+        render.material.get_no_load()
     }
 
     fn luastuff(&mut self, dt : f64)

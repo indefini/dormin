@@ -186,8 +186,6 @@ impl MeshRenderer{
 
 
     pub fn new_with_mesh_and_mat_res(
-        //mesh : Arc<RwLock<mesh::Mesh>>,
-        //material : Arc<RwLock<material::Material>>) 
         mesh : ResTT<mesh::Mesh>,
         material : ResTT<material::Material>) 
         -> MeshRenderer

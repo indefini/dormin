@@ -338,9 +338,9 @@ impl Render {
             m.add_quad(1f32, 1f32);
 
             shader_manager.borrow_mut().request_use_no_proc("shader/outline.sh");
-            let outline_mat = material_manager.borrow_mut().request_use_no_proc("material/outline.mat");
+            let outline_mat = material_manager.borrow_mut().request_use_no_proc_tt("material/outline.mat");
 
-            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat(m, outline_mat);
+            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat_res(ResTT::new_with_instance("outline_quad", m), outline_mat);
             r.quad_outline.write().unwrap().mesh_render = Some(mere);
         }
 
@@ -349,9 +349,9 @@ impl Render {
             m.add_quad(1f32, 1f32);
 
             //shader_manager.write().unwrap().request_use_no_proc("shader/all.sh");
-            let all_mat = material_manager.borrow_mut().request_use_no_proc("material/fbo_all.mat");
+            let all_mat = material_manager.borrow_mut().request_use_no_proc_tt("material/fbo_all.mat");
 
-            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat(m, all_mat);
+            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat_res(ResTT::new_with_instance("quad_all", m), all_mat);
             r.quad_all.write().unwrap().mesh_render = Some(mere);
         }
 
@@ -439,7 +439,7 @@ impl Render {
             let line : &object::Object = &self.line.read().unwrap();
             if let Some(ref mr) = line.mesh_render
             {
-                let mut mesh = mr.mesh.write().unwrap();
+                let mut mesh = &mut mr.mesh.get_instance().unwrap();//.write().unwrap();
                 mesh.clear_lines();
             }
         }
@@ -465,7 +465,7 @@ impl Render {
                     let line : &object::Object = &self.line.read().unwrap();
                     if let Some(ref mr) = line.mesh_render
                     {
-                        let mut mesh = mr.mesh.write().unwrap();
+                        let mut mesh = mr.mesh.get_instance().unwrap();
 
                         let arm_pos = ob.position + ob.orientation.rotate_vec3(&(armature.position*ob.scale));
                         let cur_rot = ob.orientation.as_quat() * armature.rotation;
@@ -768,7 +768,8 @@ fn prepare_passes_object(
             None => return
         };
 
-        let mmm = &mut mat.write().unwrap().shader;
+        //let mmm = &mut mat.write().unwrap().shader;
+        let mmm = &mut mat.get_no_load(material_manager).unwrap().shader;
 
         let mut shader_yep = match *mmm {
             Some(ref mut s) => s,
@@ -964,16 +965,6 @@ impl GameRender {
         not_yet_loaded > 0
     }
 }
-
-fn get_mesh_render(ob : &mut object::Object, resource : &resource::ResourceGroup) -> 
-Option<(Arc<RwLock<material::Material>>, Arc<RwLock<mesh::Mesh>>)>
-{
-    match ob.mesh_render {
-        Some(ref mr) => Some((mr.material.clone(), mr.mesh.clone())),
-        None => None
-    }
-}
-
 
 fn object_init_mat(
         material : &mut material::Material,

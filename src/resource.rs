@@ -100,6 +100,15 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         }
     }
 
+    pub fn new_with_index(name : &str, res : usize) -> ResTT<T>
+    {
+        ResTT {
+            name : String::from(name),
+            resource : Some(res),
+            instance : None
+        }
+    }
+
     pub fn get_from_manager<'a>(&mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
     {
         if let Some(i) = self.resource {
@@ -159,6 +168,22 @@ impl <T:'static+Create+Send+Sync> ResTT<T>
     pub fn get_resource<'a>(&mut self, manager : &'a mut ResourceManager<T>, load : Arc<Mutex<usize>> ) -> Option<&'a mut T>
     {
         resource_get(manager, self, load)
+    }
+
+    pub fn get_no_load<'a>(&'a mut self, manager : &'a mut ResourceManager<T>) -> Option<&'a mut T>
+    {
+        if let Some(i) = self.resource {
+            manager.get_from_index3(i)
+        }
+        else {
+            //None
+            self.instance.as_mut()
+        }
+    }
+
+    pub fn get_instance(&mut self) -> Option<&mut T>
+    {
+        self.instance.as_mut()
     }
 
     fn load_instant(&mut self, manager : &mut ResourceManager<T> )
@@ -778,6 +803,12 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     pub fn request_use_no_proc(&mut self, name : &str) -> Arc<RwLock<T>>
     {
         self.request_use_no_proc_old(name)
+    }
+
+    pub fn request_use_no_proc_tt(&mut self, name : &str) -> ResTT<T>
+    {
+        let i = self.request_use_no_proc_new(name);
+        ResTT::new_with_index(name, i)
     }
 
     //TODO
