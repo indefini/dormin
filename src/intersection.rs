@@ -28,7 +28,7 @@ impl IntersectionRay
     }
 }
 
-pub fn ray_object(ray : &geometry::Ray, o : &object::Object) -> IntersectionRay
+pub fn ray_object(ray : &geometry::Ray, o : &object::Object, resource : &resource::ResourceGroup) -> IntersectionRay
 {
     let out = IntersectionRay::new();
 
@@ -41,8 +41,10 @@ pub fn ray_object(ray : &geometry::Ray, o : &object::Object) -> IntersectionRay
 
             //TODO
             //let ir_box = ray_box(ray, .... 
+            //let m = &mr.mesh;
+            //ray_mesh(ray, &*m.read().unwrap(), &wp, &wq, &ws)
             let m = &mr.mesh;
-            ray_mesh(ray, &*m.read().unwrap(), &wp, &wq, &ws)
+            ray_mesh(ray, m.get_no_load(resource.mesh_manager.borrow_mut()), &wp, &wq, &ws)
         }
     }
 }

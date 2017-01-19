@@ -225,7 +225,7 @@ impl Object
         };
 
         //Some(render.material.clone())
-        render.material.get_no_load()
+        render.material.get_instance()
     }
 
     fn luastuff(&mut self, dt : f64)
