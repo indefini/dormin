@@ -200,7 +200,7 @@ impl Component for Components
             Components::Empty => {},
             $(
             Components::$member(ref mut p) => {
-                p.update(ob, dt, input);
+                p.update(ob, dt, input, resource);
             },
             )+
         }
