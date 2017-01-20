@@ -91,7 +91,8 @@ impl Component for MeshRenderer
 impl MeshRenderer{
     fn create_mesh_instance(&mut self) 
     {
-        self.mesh_instance = Some(box self.mesh.read().unwrap().clone())
+        //self.mesh_instance = Some(box self.mesh.read().unwrap().clone())
+        self.mesh_instance = Some(box self.mesh.get_instance().unwrap().clone())
     }
 
     //TODO
@@ -126,7 +127,7 @@ impl MeshRenderer{
             }
         };
 
-        ResTT::with_mesh_render(mesh_render)
+        MeshRenderer::with_mesh_render(&mesh_render, resource)
     }
 
     pub fn with_names(mesh : &str, material : &str, resource : &resource::ResourceGroup) -> MeshRenderer
@@ -134,8 +135,8 @@ impl MeshRenderer{
         MeshRenderer {
             //mesh : resource.mesh_manager.borrow_mut().request_use_no_proc(mesh),
             //material : resource.material_manager.borrow_mut().request_use_no_proc(material),
-            mesh : ResTT::new_instant(mesh,resource.mesh_manager.borrow_mut()),
-            material : ResTT::new_instant(material, resource.material_manager.borrow_mut()),
+            mesh : ResTT::new_instant(mesh, &mut *resource.mesh_manager.borrow_mut()),
+            material : ResTT::new_instant(material, &mut *resource.material_manager.borrow_mut()),
             mesh_instance : None,
             material_instance : None,
         }
@@ -143,7 +144,7 @@ impl MeshRenderer{
 
     pub fn with_mesh_render(mesh_render : &MeshRender, resource : &resource::ResourceGroup) -> MeshRenderer
     {
-        ResTT::with_names(mesh_render.mesh, mesh_render.material)
+        MeshRenderer::with_names(mesh_render.mesh.as_str(), mesh_render.material.as_str(), resource)
     }
 
     pub fn new_with_mesh_res(
@@ -155,7 +156,7 @@ impl MeshRenderer{
         MeshRenderer {
             mesh : mesh,
             //material : resource.material_manager.borrow_mut().request_use_no_proc(material.as_ref()),
-            material : ResTT::new_instant(material, resource.material_manager.borrow_mut()),
+            material : ResTT::new_instant(material, &mut *resource.material_manager.borrow_mut()),
             mesh_instance : None,
             material_instance : None,
         }
@@ -169,7 +170,7 @@ impl MeshRenderer{
         MeshRenderer {
             //TODO
             mesh : ResTT::new_with_instance("none", mesh),
-            material : ResTT::new_instant(material, resource.material_manager.borrow_mut()),
+            material : ResTT::new_instant(material, &mut *resource.material_manager.borrow_mut()),
             mesh_instance : None,
             material_instance : None,
         }
@@ -177,13 +178,27 @@ impl MeshRenderer{
 
     pub fn new_with_mat(
         mesh : &str, 
+        material : material::Material,
+        resource : &resource::ResourceGroup) -> MeshRenderer
+    {
+        MeshRenderer {
+            //mesh : resource.mesh_manager.borrow_mut().request_use_no_proc(mesh.as_ref()),
+            mesh : ResTT::new_instant(mesh, &mut *resource.mesh_manager.borrow_mut()),
+            material : ResTT::new_with_instance("no_name", material),
+            mesh_instance : None,
+            material_instance : None,
+        }
+    }
+
+    pub fn new_with_mat_res(
+        mesh : &str, 
         //material : Arc<RwLock<material::Material>>,
         material : ResTT<material::Material>,
         resource : &resource::ResourceGroup) -> MeshRenderer
     {
         MeshRenderer {
             //mesh : resource.mesh_manager.borrow_mut().request_use_no_proc(mesh.as_ref()),
-            mesh : ResTT::new_instant(mesh,resource.mesh_manager.borrow_mut()),
+            mesh : ResTT::new_instant(mesh, &mut *resource.mesh_manager.borrow_mut()),
             material : material,
             mesh_instance : None,
             material_instance : None,

@@ -181,6 +181,17 @@ impl <T:'static+Create+Send+Sync> ResTT<T>
         }
     }
 
+    pub fn as_ref<'a>(&'a self, manager : &'a ResourceManager<T>) -> Option<&'a T>
+    {
+        if let Some(i) = self.resource {
+            manager.get_as_ref(i)
+        }
+        else {
+            //None
+            self.instance.as_ref()
+        }
+    }
+
     pub fn get_instance(&mut self) -> Option<&mut T>
     {
         self.instance.as_mut()
@@ -870,6 +881,18 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 None
             },
             State::Using(ref mut u) => {
+                Some(u)
+            }
+        }
+    }
+
+    pub fn get_as_ref(&self,index : usize) -> Option<&T>
+    {
+        match self.loaded[index] {
+            State::Loading(_) => {
+                None
+            },
+            State::Using(ref u) => {
                 Some(u)
             }
         }

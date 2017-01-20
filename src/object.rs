@@ -205,10 +205,10 @@ impl Object
     }
 
     //TODO remove
-    pub fn set_uniform_data(&self, name : &str, data : shader::UniformData)
+    pub fn set_uniform_data(&mut self, name : &str, data : shader::UniformData)
     {
         let render = match self.mesh_render {
-            Some(ref r) => r,
+            Some(ref mut r) => r,
             None => return
         };
 
@@ -217,10 +217,10 @@ impl Object
     }
 
     //pub fn get_material(&self) -> Option<Arc<RwLock<material::Material>>>
-    pub fn get_material(&self) -> Option<&mut material::Material>
+    pub fn get_material(&mut self) -> Option<&mut material::Material>
     {
         let render = match self.mesh_render {
-            Some(ref r) => r,
+            Some(ref mut r) => r,
             None => return None
         };
 

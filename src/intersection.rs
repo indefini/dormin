@@ -44,7 +44,7 @@ pub fn ray_object(ray : &geometry::Ray, o : &object::Object, resource : &resourc
             //let m = &mr.mesh;
             //ray_mesh(ray, &*m.read().unwrap(), &wp, &wq, &ws)
             let m = &mr.mesh;
-            ray_mesh(ray, m.get_no_load(&mut *resource.mesh_manager.borrow_mut()).unwrap(), &wp, &wq, &ws)
+            ray_mesh(ray, m.as_ref(&mut *resource.mesh_manager.borrow_mut()).unwrap(), &wp, &wq, &ws)
         }
     }
 }
@@ -481,7 +481,7 @@ pub fn is_object_in_planes(
     };
 
     let mm = &mut *resource.mesh_manager.borrow_mut();
-    let m = mr.mesh.get_no_load(mm).unwrap();
+    let m = mr.mesh.as_ref(mm).unwrap();
 
     //first test the box and then test the object/mesh
     if let Some(ref aa) = m.aabox {

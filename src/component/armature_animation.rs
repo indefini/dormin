@@ -102,7 +102,7 @@ impl Component for ArmatureAnimation
         let base_mesh = mr.get_mesh();
         //let base = base_mesh.read().unwrap();
         let mm = &mut *resource.mesh_manager.borrow_mut();
-        let base = base_mesh.get_no_load(mm).unwrap();
+        let base = base_mesh.as_ref(mm).unwrap();
         let mut mi = mr.get_or_create_mesh_instance();
         update_mesh_with_armature(&base, mi, &self.arm_instance);
 

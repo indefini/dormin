@@ -416,7 +416,7 @@ impl Render {
 
     fn resolution_set(&mut self, w : c_int, h : c_int)
     {
-        self.quad_outline.read().unwrap().set_uniform_data(
+        self.quad_outline.write().unwrap().set_uniform_data(
             "resolution",
             shader::UniformData::Vec2(vec::Vec2::new(w as f64, h as f64)));
 
@@ -436,10 +436,10 @@ impl Render {
         }
 
         {
-            let line : &object::Object = &self.line.read().unwrap();
-            if let Some(ref mr) = line.mesh_render
+            let line : &mut object::Object = &mut *self.line.write().unwrap();
+            if let Some(ref mut mr) = line.mesh_render
             {
-                let mut mesh = &mut mr.mesh.get_instance().unwrap();//.write().unwrap();
+                let mesh = &mut mr.mesh.get_instance().unwrap();//.write().unwrap();
                 mesh.clear_lines();
             }
         }
@@ -462,10 +462,10 @@ impl Render {
                     let armature = &aa.arm_instance;
                     let color = vec::Vec4::new(1f64,1f64,1f64,1.0f64);
 
-                    let line : &object::Object = &self.line.read().unwrap();
-                    if let Some(ref mr) = line.mesh_render
+                    let line : &mut object::Object = &mut *self.line.write().unwrap();
+                    if let Some(ref mut mr) = line.mesh_render
                     {
-                        let mut mesh = mr.mesh.get_instance().unwrap();
+                        let mesh = &mut mr.mesh.get_instance().unwrap();
 
                         let arm_pos = ob.position + ob.orientation.rotate_vec3(&(armature.position*ob.scale));
                         let cur_rot = ob.orientation.as_quat() * armature.rotation;
@@ -763,7 +763,7 @@ fn prepare_passes_object(
 
         let mat = match *render {
             Some(ref mut mr) => { 
-                &mr.material
+                &mut mr.material
             },
             None => return
         };
