@@ -73,7 +73,13 @@ impl Component for MeshRenderer
     }
     */
 
-    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input)
+    fn update(
+        &mut self,
+        ob : &mut Object,
+        dt : f64,
+        input : &input::Input,
+        resource : &resource::ResourceGroup
+        )
     {
     }
 

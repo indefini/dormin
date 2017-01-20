@@ -371,7 +371,11 @@ impl Object
 
     }
 
-    pub fn update(&mut self, dt : f64, input : &input::Input)
+    pub fn update(
+        &mut self,
+        dt : f64,
+        input : &input::Input,
+        resource : &resource::ResourceGroup)
     {
         self.luastuff(dt);
 
@@ -385,7 +389,7 @@ impl Object
 
             self.components.push(box Components::Empty);
             let mut c = self.components.swap_remove(index);
-            c.update(self, dt, input);
+            c.update(self, dt, input, resource);
             self.components[index] = c;
             index = index +1;
         }

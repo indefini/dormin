@@ -29,7 +29,13 @@ pub trait Component : Any
     }
     */
     fn load(&mut self) {}
-    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input) {}
+    fn update(
+        &mut self,
+        ob : &mut Object,
+        dt : f64,
+        input : &input::Input,
+        resource : &resource::ResourceGroup
+        ) {}
 
     fn get_name(&self) -> String;
     /*
@@ -182,7 +188,13 @@ impl Component for Components
     }
 
     //fn update(&mut self, ob : &mut Object, dt : f64)
-    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input)
+    fn update(
+        &mut self,
+        ob : &mut Object, 
+        dt : f64,
+        input : &input::Input,
+        resource : &resource::ResourceGroup
+        )
     {
         match *self {
             Components::Empty => {},

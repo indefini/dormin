@@ -44,7 +44,7 @@ pub fn ray_object(ray : &geometry::Ray, o : &object::Object, resource : &resourc
             //let m = &mr.mesh;
             //ray_mesh(ray, &*m.read().unwrap(), &wp, &wq, &ws)
             let m = &mr.mesh;
-            ray_mesh(ray, m.get_no_load(resource.mesh_manager.borrow_mut()), &wp, &wq, &ws)
+            ray_mesh(ray, m.get_no_load(&mut *resource.mesh_manager.borrow_mut()).unwrap(), &wp, &wq, &ws)
         }
     }
 }
@@ -465,16 +465,23 @@ pub fn planes_is_box_in_allow_false_positives(planes : &[geometry::Plane], b : &
 
 
 
-pub fn is_object_in_planes(planes : &[geometry::Plane], o : &object::Object) 
+pub fn is_object_in_planes(
+    planes : &[geometry::Plane],
+    o : &object::Object,
+    resource : &resource::ResourceGroup
+    ) 
     -> bool
 {
-    let m = match o.mesh_render {
+    let mr = match o.mesh_render {
         None => 
             return is_position_in_planes(planes, o.position),
         Some(ref mr) => {
-            mr.mesh.read().unwrap()
+            mr
         }
     };
+
+    let mm = &mut *resource.mesh_manager.borrow_mut();
+    let m = mr.mesh.get_no_load(mm).unwrap();
 
     //first test the box and then test the object/mesh
     if let Some(ref aa) = m.aabox {
