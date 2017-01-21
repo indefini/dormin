@@ -205,7 +205,10 @@ impl Object
     }
 
     //TODO remove
-    pub fn set_uniform_data(&mut self, name : &str, data : shader::UniformData)
+    pub fn set_uniform_data(
+        &mut self,
+        name : &str,
+        data : shader::UniformData)
     {
         let render = match self.mesh_render {
             Some(ref mut r) => r,

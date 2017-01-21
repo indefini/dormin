@@ -138,46 +138,35 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         rm.get_from_index3(i)
     }
 
-    pub fn get<'a>(&mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
+    pub fn get<'a>(&'a mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
     {
-        if let Some(i) = self.resource {
+        if self.instance.is_some() {
+            self.instance.as_mut()
+        }
+        else if let Some(i) = self.resource {
             rm.get_from_index3(i)
         }
         else {
-            println!("warning !!!!, resource not loaded yet");
+            println!("warning !!!!, resource not loaded yet : {}", self.name);
             None
         }
     }
 
-}
-
-impl<T> Clone for ResTT<T>
-{
-    fn clone(&self) -> ResTT<T>
-    {
-        ResTT {
-            name : self.name.clone(),
-            resource : self.resource.clone(),
-            instance : None //TODO
-        }
-    }
-}
-
-impl <T:'static+Create+Send+Sync> ResTT<T>
-{
-    pub fn get_resource<'a>(&mut self, manager : &'a mut ResourceManager<T>, load : Arc<Mutex<usize>> ) -> Option<&'a mut T>
+    pub fn get_resource<'a>(&'a mut self, manager : &'a mut ResourceManager<T>, load : Arc<Mutex<usize>> ) -> Option<&'a mut T>
     {
         resource_get(manager, self, load)
     }
 
     pub fn get_no_load<'a>(&'a mut self, manager : &'a mut ResourceManager<T>) -> Option<&'a mut T>
     {
-        if let Some(i) = self.resource {
+        if self.instance.is_some() {
+            self.instance.as_mut()
+        }
+        else if let Some(i) = self.resource {
             manager.get_from_index3(i)
         }
         else {
-            //None
-            self.instance.as_mut()
+            None
         }
     }
 
@@ -209,6 +198,56 @@ impl <T:'static+Create+Send+Sync> ResTT<T>
             mt.inittt();
             self.instance = Some(mt);
         }
+    }
+
+}
+
+impl<T> Clone for ResTT<T>
+{
+    fn clone(&self) -> ResTT<T>
+    {
+        ResTT {
+            name : self.name.clone(),
+            resource : self.resource.clone(),
+            instance : None //TODO
+        }
+    }
+}
+
+impl <T:'static+Create+Send+Sync+Clone> ResTT<T>
+{
+
+    pub fn get_or_create_instance_no_load(
+        &mut self,
+        manager : &ResourceManager<T>) -> Option<&mut T>
+    {
+        if self.instance.is_some() {
+            self.instance.as_mut()
+        }
+        else {
+            if let Some(i) = self.resource {
+                if let Some(r) = manager.get_as_ref(i) {
+                    self.instance = Some((*r).clone());
+                }
+            }
+            
+            self.instance.as_mut()
+        }
+    }
+
+    pub fn create_instance(&mut self, manager : &ResourceManager<T>)
+    {
+        if self.instance.is_none() {
+            if let Some(i) = self.resource {
+                if let Some(r) = manager.get_as_ref(i) {
+                    self.instance = Some((*r).clone());
+                }
+            }
+            else {
+                println!("TODO could not create instance");
+            }
+        }
+
     }
 }
 
@@ -444,7 +483,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn request_use_old(&mut self, name : &str, load : Arc<Mutex<usize>>) -> ResTest<T>
+    fn request_use_old(&mut self, name : &str, load : Arc<Mutex<usize>>) -> ResTest<T>
     {
         let key = String::from(name);
 
@@ -586,12 +625,14 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn request_use_new(&mut self, name : &str, load : Arc<Mutex<usize>>) -> (usize, Option<&mut T>)
     {
+        println!(">>>request use new :: {}", name);
         let key = String::from(name);
 
         let (i,va) : (usize, Arc<RwLock<Option<T>>>) = match self.map.entry(key) {
             Vacant(entry) => {
                 let index = self.loaded.len();
                 entry.insert(index);
+                println!("request use new :: {}, adding index {}", name, index);
                 let n = Arc::new(RwLock::new(None));
                 self.loaded.push(State::Loading(n.clone()));
                 (index, n)
@@ -600,8 +641,10 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 let i = *entry.get();
                 let li = &mut self.loaded[i];
                 let (was_loading, op) = li.finalize();
+                println!("request use new :: {}, index {}, loading : {}", name, i, was_loading);
                 if was_loading {
                     if let Some(s) = op {
+                        println!("request use new :: {}, index {}, loading : {}, set to using!!!!!!!!", name, i, was_loading);
                         *li = State::Using(s);
                     }
                 }
@@ -618,7 +661,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         {
             let mut l = load.lock().unwrap();
             *l += 1;
-            println!("      ADDING {}", *l);
+            println!("      {}, ADDING {}",name,  *l);
         }
 
         let s = String::from(name);
@@ -627,12 +670,16 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         let guard = thread::spawn(move || {
             //thread::sleep(::std::time::Duration::seconds(5));
             //thread::sleep_ms(5000);
+            println!(" thread creating {}", s);
             let mut m : T = Create::create(s.as_ref());
             m.inittt();
+            println!(" thread creating {}, finish sending", s);
             let result = tx.send(m);
         });
 
         //let result = guard.join();
+        
+        let s2 = String::from(name);
 
         thread::spawn( move || {
             loop {
@@ -643,7 +690,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                         *entry = Some(value);
                         let mut l = load.lock().unwrap();
                         *l -= 1;
-                        println!("      SUBBBBBB {}", *l);
+                        println!("     {} RECEIVED {}", s2, *l);
                         break; }
                 }
             }
@@ -874,15 +921,38 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn get_from_index3(&mut self,index : usize) -> Option<&mut T>
+    pub fn get_from_index3(&mut self, index : usize) -> Option<&mut T>
     {
+        /*
         match self.loaded[index] {
             State::Loading(_) => {
-                None
             },
             State::Using(ref mut u) => {
-                Some(u)
+                return Some(u);
             }
+        }
+        */
+
+        let li = &mut self.loaded[index];
+
+        if let State::Using(ref mut u) = *li {
+            return Some(u);
+        }
+
+        let (was_loading, op) = li.finalize();
+        //println!("getindex3 :: {}, index {}, loading : {}", name, i, was_loading);
+        if was_loading {
+            if let Some(s) = op {
+                //println!("request use new :: {}, index {}, loading : {}, set to using!!!!!!!!", name, i, was_loading);
+                *li = State::Using(s);
+            }
+        }
+
+        match *li {
+            State::Using(ref mut u) => {
+                return Some(u);
+            }
+            _ => {return None; }
         }
     }
 
@@ -903,6 +973,17 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         let index = self.request_use_no_proc_new(name);
         Some(self.get_from_index2(index))
     }
+}
+
+impl<T:'static+Clone+Create+Sync+Send> ResourceManager<T> {
+    pub fn request_use_no_proc_tt_instance(&mut self, name : &str) -> ResTT<T>
+    {
+        let i = self.request_use_no_proc_new(name);
+        let mut t = ResTT::new_with_index(name, i);
+        t.create_instance(self);
+        t
+    }
+
 }
 
 //#[deriving(Decodable, Encodable)]
@@ -967,15 +1048,22 @@ pub fn resource_get<T:'static+Create+Send+Sync>(
 
 pub fn resource_get<'a, T:'static+Create+Send+Sync>(
     manager : &'a mut ResourceManager<T>,
-    res: &mut ResTT<T>,
+    res: &'a mut ResTT<T>,
     load : Arc<Mutex<usize>>
     )
     -> Option<&'a mut T>
 {
-    if let Some(i) = res.resource {
+    //println!("RESOURCE GET : {}, ",res.name);
+    if res.instance.is_some() {
+        //println!("  RESOURCE GET : {}, there is a instance, i return it ",res.name);
+        res.instance.as_mut()
+    }
+    else if let Some(i) = res.resource {
+        //println!("  RESOURCE GET : {}, there is an index, i return it ",res.name);
         manager.get_from_index3(i)
     }
     else {
+        //println!("  RESOURCE GET : {}, there is nothing, i request new ",res.name);
         let (i, r) = manager.request_use_new(res.name.as_ref(), load);
         res.resource = Some(i);
         r

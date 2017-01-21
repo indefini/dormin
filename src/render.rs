@@ -114,6 +114,7 @@ impl RenderPass
         load : Arc<Mutex<usize>>
         ) -> usize
     {
+        println!("will draw frame with shader : {}", self.shader.name);
         //let shader = &mut *self.shader.write().unwrap();
         let shader_manager = &mut *resource.shader_manager.borrow_mut();
         let shader = self.shader.get_from_manager_instant(shader_manager).unwrap();
@@ -138,6 +139,7 @@ impl RenderPass
 
             for o in p.objects.iter() {
                 let mut ob = o.write().unwrap();
+                println!("drawing : {}", ob.name);
                 let not = self.draw_object(
                     shader,
                     &mut *ob,
@@ -179,6 +181,7 @@ impl RenderPass
         load : Arc<Mutex<usize>>
         ) -> usize
     {
+        println!("start draw object : {}", ob.name);
         let mut not_loaded = 0;
 
         if ob.mesh_render.is_none() {
@@ -337,8 +340,8 @@ impl Render {
             let mut m = mesh::Mesh::new();
             m.add_quad(1f32, 1f32);
 
-            shader_manager.borrow_mut().request_use_no_proc("shader/outline.sh");
-            let outline_mat = material_manager.borrow_mut().request_use_no_proc_tt("material/outline.mat");
+            shader_manager.borrow_mut().request_use_no_proc_new("shader/outline.sh");
+            let outline_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/outline.mat");
 
             let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat_res(ResTT::new_with_instance("outline_quad", m), outline_mat);
             r.quad_outline.write().unwrap().mesh_render = Some(mere);
@@ -349,7 +352,7 @@ impl Render {
             m.add_quad(1f32, 1f32);
 
             //shader_manager.write().unwrap().request_use_no_proc("shader/all.sh");
-            let all_mat = material_manager.borrow_mut().request_use_no_proc_tt("material/fbo_all.mat");
+            let all_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/fbo_all.mat");
 
             let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat_res(ResTT::new_with_instance("quad_all", m), all_mat);
             r.quad_all.write().unwrap().mesh_render = Some(mere);
@@ -486,31 +489,6 @@ impl Render {
                 None => {}// println!("{} nooooooo", ob.name)}
             };
         }
-
-        prepare_passes_object(
-            self.grid.clone(),
-            &mut self.passes,
-            &mut self.resource.material_manager.borrow_mut(),
-            &mut self.resource.shader_manager.borrow_mut(),
-            self.camera.clone());
-
-        let m = 40f64;
-        self.camera_repere.write().unwrap().position = 
-            vec::Vec3::new(
-                -self.camera_ortho.borrow().data.width/2f64 +m, 
-                -self.camera_ortho.borrow().data.height/2f64 +m, 
-                -10f64);
-        let camera = 
-            self.camera.borrow();
-        self.camera_repere.write().unwrap().orientation = 
-            camera.object.read().unwrap().orientation.inverse();
-
-        prepare_passes_object(
-            self.camera_repere.clone(),
-            &mut self.passes,
-            &mut self.resource.material_manager.borrow_mut(),
-            &mut self.resource.shader_manager.borrow_mut(),
-            self.camera_ortho.clone());
     }
 
     fn prepare_passes_selected(
@@ -574,8 +552,7 @@ impl Render {
 
     pub fn draw(
         &mut self,
-        objects : &[Arc<RwLock<object::Object>>],
-        cameras: &[Arc<RwLock<object::Object>>],
+        objects : &[Arc<RwLock<object::Object>>], cameras: &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
         draggers : &[Arc<RwLock<object::Object>>],
         on_finish : &Fn(bool),
@@ -604,6 +581,33 @@ impl Render {
         self.clean_passes();
         self.add_objects_to_passes(objects);
         self.add_objects_to_passes(cameras);
+
+        {
+        prepare_passes_object(
+            self.grid.clone(),
+            &mut self.passes,
+            &mut self.resource.material_manager.borrow_mut(),
+            &mut self.resource.shader_manager.borrow_mut(),
+            self.camera.clone());
+
+        let m = 40f64;
+        self.camera_repere.write().unwrap().position = 
+            vec::Vec3::new(
+                -self.camera_ortho.borrow().data.width/2f64 +m, 
+                -self.camera_ortho.borrow().data.height/2f64 +m, 
+                -10f64);
+        let camera = 
+            self.camera.borrow();
+        self.camera_repere.write().unwrap().orientation = 
+            camera.object.read().unwrap().orientation.inverse();
+
+        prepare_passes_object(
+            self.camera_repere.clone(),
+            &mut self.passes,
+            &mut self.resource.material_manager.borrow_mut(),
+            &mut self.resource.shader_manager.borrow_mut(),
+            self.camera_ortho.clone());
+        }
 
         {
         //self.fbo_all.read().unwrap().cgl_use();
@@ -759,33 +763,47 @@ fn prepare_passes_object(
     {
         let oc = o.clone();
         let mut occ = oc.write().unwrap();
+        let name = occ.name.clone();
         let render = &mut occ.mesh_render;
 
         let mat = match *render {
             Some(ref mut mr) => { 
                 &mut mr.material
             },
-            None => return
+            None => {
+                println!("{}, no mesh render, return", name);
+                return
+            }
         };
 
         //let mmm = &mut mat.write().unwrap().shader;
+        let matname = mat.name.clone();
         let mmm = &mut mat.get_no_load(material_manager).unwrap().shader;
 
         let mut shader_yep = match *mmm {
             Some(ref mut s) => s,
-            None =>  return
+            None =>  {
+                println!("{}, material problem, return, {}", name, matname);
+                return
+            }
         };
 
+        let shader_copy = shader_yep.clone();
+        let shadername = shader_yep.name.clone();
         let shader = match shader_yep.get_resource(shader_manager, load) {
+        //let shader = match shader_yep.get_no_load(shader_manager) {
             Some(s) => s,
-            None => return
+            None => {
+                println!("{}, shader problem, return, {}", name, shadername);
+                return
+            }
         };
 
         {
             let key = shader.name.clone();
             let rp = match passes.entry(key) {
                 Vacant(entry) => 
-                    entry.insert(box RenderPass::new(shader_yep.clone(), camera.clone())),
+                    entry.insert(box RenderPass::new(shader_copy, camera.clone())),
                 Occupied(entry) => entry.into_mut(),
             };
 
