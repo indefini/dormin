@@ -691,6 +691,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     }
     */
 
+    /*
     pub fn request_use_no_proc_old(&mut self, name : &str) -> Arc<RwLock<T>>
     {
         let key = String::from(name);
@@ -722,6 +723,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     {
         self.request_use_no_proc_old(name)
     }
+    */
 
     pub fn request_use_no_proc_tt(&mut self, name : &str) -> ResTT<T>
     {
