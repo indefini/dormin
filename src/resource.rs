@@ -691,40 +691,6 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     }
     */
 
-    /*
-    pub fn request_use_no_proc_old(&mut self, name : &str) -> Arc<RwLock<T>>
-    {
-        let key = String::from(name);
-
-        let va : Arc<RwLock<ResTest<T>>> = match self.resources.entry(key) {
-            Vacant(entry) => entry.insert(Arc::new(RwLock::new(ResNone))).clone(),
-            Occupied(entry) => entry.into_mut().clone(),
-        };
-
-        let v : &mut ResTest<T> = &mut *va.write().unwrap();
-
-        match *v 
-        {
-            ResNone | ResWait => {
-                let mt : T = Create::create(name);
-                let m = Arc::new(RwLock::new(mt));
-                m.write().unwrap().inittt();
-
-                *v = ResData(m.clone());
-                return m.clone();
-            },
-            ResData(ref yep) => {
-                return yep.clone();
-            },
-        }
-    }
-
-    pub fn request_use_no_proc(&mut self, name : &str) -> Arc<RwLock<T>>
-    {
-        self.request_use_no_proc_old(name)
-    }
-    */
-
     pub fn request_use_no_proc_tt(&mut self, name : &str) -> ResTT<T>
     {
         let i = self.request_use_no_proc_new(name);
@@ -880,34 +846,6 @@ impl<T> Decodable for ResTT<T> {
     }
 }
 
-/*
-pub fn resource_get<T:'static+Create+Send+Sync>(
-    manager : &mut ResourceManager<T>,
-    res: &mut ResTT<T>,
-    load : Arc<Mutex<usize>>
-    )
-    -> Option<Arc<RwLock<T>>>
-{
-    let mut the_res : Option<Arc<RwLock<T>>> = None;
-    match res.resource{
-        ResNone | ResWait => {
-            res.resource = manager.request_use(res.name.as_ref(), load);
-            match res.resource {
-                ResData(ref data) => {
-                    the_res = Some(data.clone());
-                }
-                _ => {}
-            }
-        },
-        ResData(ref data) => {
-            the_res = Some(data.clone());
-        },
-    }
-
-    the_res
-}
-*/
-
 pub fn resource_get<'a, T:'static+Create+Send+Sync>(
     manager : &'a mut ResourceManager<T>,
     res: &'a mut ResTT<T>,
@@ -915,17 +853,13 @@ pub fn resource_get<'a, T:'static+Create+Send+Sync>(
     )
     -> Option<&'a mut T>
 {
-    //println!("RESOURCE GET : {}, ",res.name);
     if res.instance.is_some() {
-        //println!("  RESOURCE GET : {}, there is a instance, i return it ",res.name);
         res.instance.as_mut()
     }
     else if let Some(i) = res.resource {
-        //println!("  RESOURCE GET : {}, there is an index, i return it ",res.name);
         manager.get_from_index3(i)
     }
     else {
-        //println!("  RESOURCE GET : {}, there is nothing, i request new ",res.name);
         let (i, r) = manager.request_use_new(res.name.as_ref(), load);
         res.resource = Some(i);
         r

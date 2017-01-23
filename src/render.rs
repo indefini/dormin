@@ -1020,7 +1020,6 @@ fn object_init_mat(
                 let r = resource::resource_get(texture_manager, img, load.clone());
                 match r {
                     Some(tex) => {
-                        //let mut tex = t.write().unwrap();
                         if tex.state == 1 {
                             tex.init();
                         }
@@ -1034,24 +1033,6 @@ fn object_init_mat(
                 }
             },
             material::Sampler::Fbo(ref mut fbo, ref attachment) => {
-                /*
-                let yep = resource::resource_get(&mut *resource.fbo_manager.borrow_mut(), fbo, load.clone());
-                match yep {
-                    Some(yoyo) => {
-                        let fff = yoyo.read().unwrap();
-                        let fbosamp = uniform::FboSampler { 
-                            fbo : & *fff,
-                            attachment : *attachment
-                        };
-                        shader.texture_set(name.as_ref(), &fbosamp,i);
-                        i = i +1;
-                    },
-                    None => {
-                        not_loaded = not_loaded +1;
-                    }
-                }
-                */
-                //let yep = resource::resource_get(&mut *resource.fbo_manager.borrow_mut(), fbo, load.clone());
                 let mut rm = resource.fbo_manager.borrow_mut();
                 let yep = rm.get_or_create(fbo.name.as_str());
                 match yep {
