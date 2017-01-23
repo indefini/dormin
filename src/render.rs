@@ -117,7 +117,7 @@ impl RenderPass
         println!("will draw frame with shader : {}", self.shader.name);
         //let shader = &mut *self.shader.write().unwrap();
         let shader_manager = &mut *resource.shader_manager.borrow_mut();
-        let shader = self.shader.get_from_manager_instant(shader_manager).unwrap();
+        let shader = self.shader.get_from_manager_instant(shader_manager);
 
         if shader.state == 0 {
             shader.read();

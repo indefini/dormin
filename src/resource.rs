@@ -11,6 +11,7 @@ use transform;
 
 use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use std::collections::HashMap;
+use std::collections::hash_map::Values;
 use std::collections::hash_map::Entry;
 use std::collections::hash_map::Entry::{Occupied,Vacant};
 use std::sync::{RwLock, Arc, Mutex};
@@ -21,6 +22,7 @@ use std::thread;
 
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::iter;
 use uuid;
 
 
@@ -123,19 +125,19 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         }
     }
 
-    pub fn get_from_manager_instant<'a> (&self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
+    pub fn get_from_manager_instant<'a> (&self, rm : &'a mut ResourceManager<T>) -> &'a mut T
     {
         let i = if let Some(i) = self.resource {
             i
         }
         else {
             let i = rm.request_use_no_proc_new(self.name.as_ref());
-            println!("warning !!!! this file gets requested everytime");
+            println!("warning !!!! this file gets requested everytime : {}", self.name);
             //self.resource = Some(i);
             i
         };
 
-        rm.get_from_index3(i)
+        rm.get_from_index_instant(i)
     }
 
     pub fn get<'a>(&'a mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
@@ -401,7 +403,7 @@ pub enum StateOld
 
 pub enum State<T>
 {
-    Loading(Arc<RwLock<Option<T>>>),
+    Loading(Option<thread::JoinHandle<()>>,Arc<RwLock<Option<T>>>),
     Using(T),
 }
 
@@ -420,7 +422,31 @@ impl<T> State<T>
     fn finalize(& self) -> (bool, Option<T>)
     {
         match *self {
-            State::Loading(ref l) => {
+            State::Loading(_, ref l) => {
+                let is_some = {
+                    let v : &Option<T> = &*l.read().unwrap();
+                    v.is_some()
+                };
+
+                if is_some {
+                    return (true, l.write().unwrap().take());
+                }
+                else {
+                    (true, None)
+                }
+            },
+            _ => {
+                (false, None)
+            }
+        }
+    }
+
+    fn finalize2(&mut self) -> (bool, Option<T>)
+    {
+        match *self {
+            State::Loading(ref mut ojh, ref l) => {
+                let jh = ojh.take().unwrap();
+                jh.join();
                 let is_some = {
                     let v : &Option<T> = &*l.read().unwrap();
                     v.is_some()
@@ -483,19 +509,52 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
+    pub fn get_all_ref(&self) -> Vec<&T>
+    {
+        let mut vec = Vec::new();
+        for (k,v) in &self.map {
+            if let Some(r) = self.get_as_ref(*v) {
+                vec.push(r);
+            }
+        }
+        vec
+    }
+
+    /*
+    pub fn get_all_mut<'a>(&'a self) -> 
+    //pub fn get_all_mut<'a>(&'a self) -> 
+        //iter::FilterMap<I::IntoIter, fn(&I::Item) -> Option<&'a T>>
+        iter::FilterMap<&Vec<State<T>>, fn(&State<T>) -> Option<&'a T>>
+    {
+        //fn filter<T>(s : &State<T>) -> Option<&T>
+        let filter = |s : &State<T>| 
+        {
+            match *s {
+                State::Loading(_,_) => {
+                    None
+                },
+                State::Using(ref u) => {
+                    Some(u)
+                }
+            }
+        };
+
+        self.loaded.iter().filter_map(filter)
+    }
+    */
+
+
     pub fn request_use_new(&mut self, name : &str, load : Arc<Mutex<usize>>) -> (usize, Option<&mut T>)
     {
         println!(">>>request use new :: {}", name);
         let key = String::from(name);
 
-        let (i,va) : (usize, Arc<RwLock<Option<T>>>) = match self.map.entry(key) {
+        let i : usize = match self.map.entry(key) {
             Vacant(entry) => {
                 let index = self.loaded.len();
                 entry.insert(index);
                 println!("request use new :: {}, adding index {}", name, index);
-                let n = Arc::new(RwLock::new(None));
-                self.loaded.push(State::Loading(n.clone()));
-                (index, n)
+                index
             }
             Occupied(entry) => {
                 let i = *entry.get();
@@ -537,16 +596,18 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
             let result = tx.send(m);
         });
 
-        //let result = guard.join();
         
         let s2 = String::from(name);
 
-        thread::spawn( move || {
+        let n = Arc::new(RwLock::new(None));
+        let nn = n.clone();
+
+        let join_handle = thread::spawn( move || {
             loop {
                 match rx.try_recv() {
                     Err(_) => {},
                     Ok(value) =>  { 
-                        let entry = &mut *va.write().unwrap();
+                        let entry = &mut *nn.write().unwrap();
                         *entry = Some(value);
                         let mut l = load.lock().unwrap();
                         *l -= 1;
@@ -555,6 +616,9 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 }
             }
         });
+
+        //let result = guard.join();
+        self.loaded.push(State::Loading(Some(join_handle), n));
 
         (i, None)
     }
@@ -740,7 +804,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     pub fn get_from_index2(&mut self,index : usize) -> &mut T
     {
         match self.loaded[index] {
-            State::Loading(_) => {
+            State::Loading(_,_) => {
                 panic!("should return an option");
             },
             State::Using(ref mut u) => {
@@ -751,16 +815,6 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn get_from_index3(&mut self, index : usize) -> Option<&mut T>
     {
-        /*
-        match self.loaded[index] {
-            State::Loading(_) => {
-            },
-            State::Using(ref mut u) => {
-                return Some(u);
-            }
-        }
-        */
-
         let li = &mut self.loaded[index];
 
         if let State::Using(ref mut u) = *li {
@@ -768,10 +822,8 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
 
         let (was_loading, op) = li.finalize();
-        //println!("getindex3 :: {}, index {}, loading : {}", name, i, was_loading);
         if was_loading {
             if let Some(s) = op {
-                //println!("request use new :: {}, index {}, loading : {}, set to using!!!!!!!!", name, i, was_loading);
                 *li = State::Using(s);
             }
         }
@@ -784,10 +836,36 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
+    pub fn get_from_index_instant(&mut self, index : usize) -> &mut T
+    {
+        let li = &mut self.loaded[index];
+
+        if let State::Using(ref mut u) = *li {
+            return u;
+        }
+
+        let (was_loading, op) = li.finalize2();
+        if was_loading {
+            if let Some(s) = op {
+                *li = State::Using(s);
+            }
+        }
+
+        match *li {
+            State::Using(ref mut u) => {
+                return u;
+            }
+            _ => {
+                panic!(" why?????");
+            }
+        }
+    }
+
+
     pub fn get_as_ref(&self,index : usize) -> Option<&T>
     {
         match self.loaded[index] {
-            State::Loading(_) => {
+            State::Loading(_,_) => {
                 None
             },
             State::Using(ref u) => {
@@ -795,6 +873,19 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
             }
         }
     }
+
+    pub fn get_as_mut(&mut self, index : usize) -> Option<&mut T>
+    {
+        match self.loaded[index] {
+            State::Loading(_,_) => {
+                None
+            },
+            State::Using(ref mut u) => {
+                Some(u)
+            }
+        }
+    }
+
 
     pub fn get_or_create(&mut self, name : &str) -> Option<&mut T>
     {
