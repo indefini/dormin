@@ -12,6 +12,7 @@ use transform;
 use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use std::collections::HashMap;
 use std::collections::hash_map::Values;
+use std::slice::{Iter,IterMut};
 use std::collections::hash_map::Entry;
 use std::collections::hash_map::Entry::{Occupied,Vacant};
 use std::sync::{RwLock, Arc, Mutex};
@@ -520,28 +521,24 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         vec
     }
 
-    /*
-    pub fn get_all_mut<'a>(&'a self) -> 
-    //pub fn get_all_mut<'a>(&'a self) -> 
-        //iter::FilterMap<I::IntoIter, fn(&I::Item) -> Option<&'a T>>
-        iter::FilterMap<&Vec<State<T>>, fn(&State<T>) -> Option<&'a T>>
+    pub fn get_all_mut(&mut self) -> 
+        iter::FilterMap<IterMut<State<T>>, fn(&mut State<T>) -> Option<&mut T>>
     {
-        //fn filter<T>(s : &State<T>) -> Option<&T>
-        let filter = |s : &State<T>| 
+        fn filter<A:'static+Create+Sync+Send>(s : &mut State<A>)
+            -> Option<&mut A>
         {
             match *s {
                 State::Loading(_,_) => {
                     None
                 },
-                State::Using(ref u) => {
+                State::Using(ref mut u) => {
                     Some(u)
                 }
             }
         };
 
-        self.loaded.iter().filter_map(filter)
+        self.loaded.iter_mut().filter_map(filter)
     }
-    */
 
 
     pub fn request_use_new(&mut self, name : &str, load : Arc<Mutex<usize>>) -> (usize, Option<&mut T>)
