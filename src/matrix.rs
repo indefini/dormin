@@ -1,5 +1,4 @@
 use vec;
-use std::num::Zero;
 //use std::num::Float;
 use std::fmt;
 use std::ops::{Mul};
@@ -155,7 +154,7 @@ impl Matrix4
 
         let length2 = q.length2();
 
-        if length2.abs() == f64::zero() {
+        if length2.abs() == 0f64 {
             let mut mat = Matrix4 { data : m};
             mat.identity_set();
             return mat;

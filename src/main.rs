@@ -76,7 +76,7 @@ mod util;
 mod input;
 
 
-static mut sTest : i32 = 5;
+static mut S_TEST : i32 = 5;
 
 fn main() {
     let files = util::get_files_in_dir("scene");
@@ -84,7 +84,7 @@ fn main() {
     util::print_vec_cstring(cs);
     util::pass_slice();
     unsafe {
-    sTest = 4432;
+    S_TEST = 4432;
     }
 
     {
