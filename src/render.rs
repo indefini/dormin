@@ -114,7 +114,7 @@ impl RenderPass
         load : Arc<Mutex<usize>>
         ) -> usize
     {
-        println!("will draw frame with shader : {}", self.shader.name);
+        println!("-------->>>>>>>> will draw frame with shader : {}", self.shader.name);
         //let shader = &mut *self.shader.write().unwrap();
         let shader_manager = &mut *resource.shader_manager.borrow_mut();
         let shader = self.shader.get_from_manager_instant(shader_manager);
@@ -152,6 +152,8 @@ impl RenderPass
             }
         }
 
+        println!("<<<<<<<<-------- will draw frame with shader : {}", self.shader.name);
+
         not_loaded
     }
 
@@ -185,6 +187,7 @@ impl RenderPass
         let mut not_loaded = 0;
 
         if ob.mesh_render.is_none() {
+            println!("return no mesh_render : {}", ob.name);
             return not_loaded;
         }
 
@@ -196,6 +199,7 @@ impl RenderPass
 
             //let m = &mut mr.material.write().unwrap();
             let material_manager = &mut *resource.material_manager.borrow_mut();
+            println!("  start draw object : material : {:?}", mr.material);
             let m = mr.material.get(material_manager).unwrap();
 
             object_init_mat(m, shader, resource, load)
@@ -211,12 +215,16 @@ impl RenderPass
 
             //let m = &mut mr.mesh.write().unwrap();
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
+            println!("  start draw object : mesh : {:?}", mr.mesh);
+
             let m = mr.mesh.get(mesh_manager).unwrap();
             object_init_mesh(m, shader)
         };
 
         let (can_render, vertex_data_count) = init_mesh(ob.mesh_render.as_mut().unwrap());
 
+
+            println!("  start draw object : can : {}, count {}", can_render, vertex_data_count);
         if can_render {
 
             let object_mat = ob.get_world_matrix();
@@ -232,6 +240,7 @@ impl RenderPass
                 //let m = &mut mr.mesh.write().unwrap();
                 let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
                 let m = mr.mesh.get(mesh_manager).unwrap();
+                println!(" DRAW MESH: {}", m.name);
                 object_draw_mesh(m, vertex_data_count);
             };
 

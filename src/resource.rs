@@ -24,6 +24,8 @@ use std::thread;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::iter;
+use std::fmt;
+
 use uuid;
 
 
@@ -252,6 +254,23 @@ impl <T:'static+Create+Send+Sync+Clone> ResTT<T>
         }
 
     }
+}
+
+impl<T> fmt::Debug for ResTT<T>
+{
+    fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result
+    {
+        let s = if self.instance.is_none() {
+            "no instance"
+        }
+        else {
+            "there is an instance"
+        };
+
+
+        write!(fmt, "{} : resource : {:?} and {}", self.name, self.resource, s)
+    }
+
 }
 
 pub trait Create
@@ -616,6 +635,8 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
         //let result = guard.join();
         self.loaded.push(State::Loading(Some(join_handle), n));
+
+        assert!(self.loaded.len() -1 == i);
 
         (i, None)
     }
