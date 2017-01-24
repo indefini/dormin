@@ -18,7 +18,6 @@ use std::collections::hash_map::Entry::{Occupied,Vacant};
 use std::sync::{RwLock, Arc, Mutex};
 use std::sync::mpsc::channel;
 //use std::time::Duration;
-use self::ResTest::{ResData,ResWait,ResNone};
 use std::thread;
 
 use std::rc::Rc;
@@ -31,34 +30,6 @@ use uuid;
 
 pub trait ResourceT  {
     fn init(&mut self);
-}
-
-pub enum ResTest<T>
-{
-    ResData(Arc<RwLock<T>>),
-    ResWait,
-    ResNone
-}
-
-impl<T:'static+Create+Sync+Send> ResTest<T> {
-
-    fn get_or_load_instant(&mut self, name : &str) -> Arc<RwLock<T>>
-    {
-        match *self
-        {
-            ResNone | ResWait => {
-                let mt : T = Create::create(name);
-                let m = Arc::new(RwLock::new(mt));
-                m.write().unwrap().inittt();
-
-                *self = ResData(m.clone());
-                return m.clone();
-            },
-            ResData(ref yep) => {
-                return yep.clone();
-            },
-        }
-    }
 }
 
 pub struct ResTT<T>
@@ -488,16 +459,10 @@ impl<T> State<T>
 
 pub struct ResourceManager<T>
 {
-    pub resources : HashMap<String, Arc<RwLock<ResTest<T>>>>,
-
-    //TODO new style (wip)
     map : HashMap<String, usize>,
-    // really use arc/rwlock?
-    // rwlock just needed when resource is not done loading and we will still write.
-    res : Vec<Arc<RwLock<ResTest<T>>>>,
     loaded : Vec<State<T>>,
 
-    //TODO
+    // Other possible way
     //map : HashMap<String, usize>, => saves index to ids, and id never change
     //ids : Vec<State>,
     
@@ -515,32 +480,36 @@ pub struct ResourceManager<T>
 unsafe impl<T:Send> Send for ResourceManager<T> {}
 unsafe impl<T:Sync> Sync for ResourceManager<T> {}
 
-type ReceiveResource<T> = fn(ResTest<T>);
 
 impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     pub fn new() -> ResourceManager<T>
     {
         ResourceManager {
-            resources : HashMap::new(),
-
             map : HashMap::new(),
-            res : Vec::new(),
             loaded : Vec::new(),
         }
     }
 
-    pub fn get_all_ref(&self) -> Vec<&T>
+    pub fn loaded_iter(&self) -> 
+        iter::FilterMap<Iter<State<T>>, fn(&State<T>) -> Option<&T>>
     {
-        let mut vec = Vec::new();
-        for (k,v) in &self.map {
-            if let Some(r) = self.get_as_ref(*v) {
-                vec.push(r);
+        fn filter<A:'static+Create+Sync+Send>(s : &State<A>)
+            -> Option<&A>
+        {
+            match *s {
+                State::Loading(_,_) => {
+                    None
+                },
+                State::Using(ref u) => {
+                    Some(u)
+                }
             }
-        }
-        vec
+        };
+
+        self.loaded.iter().filter_map(filter)
     }
 
-    pub fn get_all_mut(&mut self) -> 
+    pub fn loaded_iter_mut(&mut self) -> 
         iter::FilterMap<IterMut<State<T>>, fn(&mut State<T>) -> Option<&mut T>>
     {
         fn filter<A:'static+Create+Sync+Send>(s : &mut State<A>)
@@ -558,7 +527,6 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
         self.loaded.iter_mut().filter_map(filter)
     }
-
 
     pub fn request_use_new(&mut self, name : &str, load : Arc<Mutex<usize>>) -> (usize, Option<&mut T>)
     {
@@ -641,138 +609,6 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         (i, None)
     }
 
-    pub fn arequest_use_copy_test<F>(&mut self, name : &str, on_ready : F) -> ResTest<T>
-        //where F : Fn(), F:Send +'static
-        where F : Fn() + Send + 'static + Sync
-    {
-        let key = String::from(name);
-
-        let va : Arc<RwLock<ResTest<T>>> = match self.resources.entry(key) {
-            Entry::Vacant(entry) => entry.insert(Arc::new(RwLock::new(ResTest::ResNone))).clone(),
-            Entry::Occupied(entry) => entry.into_mut().clone(),
-        };
-
-        {
-            let v : &mut ResTest<T> = &mut *va.write().unwrap();
-
-            match *v {
-                ResTest::ResData(ref yep) => {
-                    return ResTest::ResData(yep.clone());
-                },
-                ResTest::ResWait => {
-                    return ResTest::ResWait;
-                },
-                ResTest::ResNone => {
-                    *v = ResTest::ResWait;
-                },
-            }
-        }
-
-        let s = String::from(name);
-
-        let (tx, rx) = channel::<Arc<RwLock<T>>>();
-        let guard = thread::spawn(move || {
-            //thread::sleep(::std::time::Duration::seconds(5));
-            //thread::sleep_ms(5000);
-            let mt : T = Create::create(s.as_ref());
-            let m = Arc::new(RwLock::new(mt));
-            m.write().unwrap().inittt();
-            let result = tx.send(m.clone());
-        });
-
-        //let result = guard.join();
-
-        thread::spawn( move || {
-            loop {
-                match rx.try_recv() {
-                    Err(_) => {},
-                    Ok(value) =>  { 
-                        let entry = &mut *va.write().unwrap();
-                        *entry = ResTest::ResData(value.clone());
-                        on_ready();
-                        break; }
-                }
-            }
-        });
-
-        return ResTest::ResWait;
-
-
-    }
-
-
-        //TODO wip
-        /*
-    pub fn request_use_and_call<F>(&mut self, name : &str, f : F) 
-        -> ResTest<T> where F : Fn(ResTest<T>), F:Send +'static
-    {
-        let ms1 = self.resources.clone();
-        let mut ms1w = ms1.write().unwrap();
-
-        let key = String::from(name);
-
-        let v : &mut ResTest<T> = match ms1w.entry(key) {
-        //let v : &mut ResTest<T> = match ms1w.entry(&s) {
-            Entry::Vacant(entry) => entry.insert(ResTest::ResNone),
-            Entry::Occupied(entry) => entry.into_mut(),
-        };
-
-        let s = String::from(name);
-        let msc = self.resources.clone();
-
-        match *v 
-        {
-            ResNone => {
-                *v = ResTest::ResWait;
-
-                let ss = s.clone();
-
-                let (tx, rx) = channel::<Arc<RwLock<T>>>();
-                let guard = thread::scoped(move || {
-                    //sleep(::std::time::duration::Duration::seconds(5));
-                    let mt : T = Create::create(ss.as_ref());
-                    let m = Arc::new(RwLock::new(mt));
-                    m.write().unwrap().inittt();
-                    let result = tx.send(m.clone());
-                });
-
-                let result = guard.join();
-
-                thread::spawn( move || {
-                    loop {
-                    match rx.try_recv() {
-                        Err(_) => {},
-                        Ok(value) =>  { 
-                            let mut mscwww = msc.write().unwrap();
-                            let rd = ResTest::ResData(value.clone());
-                            f(rd);
-
-                            match mscwww.entry(s.clone()) {
-                                //Entry::Vacant(entry) => entry.insert(ResTest::ResNone),
-                                Entry::Vacant(entry) => entry.insert(ResTest::ResData(value.clone())),
-                                Entry::Occupied(mut entry) => { 
-                                    *entry.get_mut() = ResTest::ResData(value.clone());
-                                    entry.into_mut()
-                                }
-                            };
-
-                            break; }
-                    }
-                    }
-                });
-
-                return ResTest::ResWait;
-            },
-            ResTest::ResData(ref yep) => {
-                return ResTest::ResData(yep.clone());
-            },
-            ResTest::ResWait => {
-                return ResTest::ResWait;
-            }
-        }
-    }
-    */
-
     pub fn request_use_no_proc_tt(&mut self, name : &str) -> ResTT<T>
     {
         let i = self.request_use_no_proc_new(name);
@@ -799,24 +635,6 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 *entry.get()
             },
         }
-    }
-
-
-    pub fn get_from_index(&self,index : usize) -> Arc<RwLock<T>>
-    {
-        let r = &self.res[index];
-        match *r.read().unwrap()
-        {
-            ResNone | ResWait => {
-                //TODO we should not need to panic as calling this function means you know you already
-                // loaded it, there should be be wait stuff only already loaded data to look into.
-                panic!("it is not loaded yet");
-            },
-            ResData(ref yep) => {
-                return yep.clone();
-            },
-        }
-
     }
 
     pub fn get_from_index2(&mut self,index : usize) -> &mut T

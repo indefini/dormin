@@ -32,9 +32,7 @@ pub fn create_table_mesh(table : Table) -> mesh::Mesh
 /*
 pub fn create_mesh_render(mesh : mesh::Mesh) -> mesh_render::MeshRender
 {
-    let m = Arc::new(RwLock::new(mesh));
-    let rs = resource::ResTest::ResData(m);
-    let mr = resource::ResTT::new_with_res("table", rs);
+    let mr = resource::ResTT::new_with_res("table", mesh);
 
     let mesh_render =
         mesh_render::MeshRender::new_with_mesh(mr, "material/line.mat");
