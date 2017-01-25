@@ -50,6 +50,15 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         }
     }
 
+    pub fn create_instance(&mut self)
+    {
+        if self.instance.is_none() {
+            let mut mt : T = Create::create(self.name.as_ref());
+            mt.inittt();
+            self.instance = Some(mt);
+        }
+    }
+
     pub fn new_with_instance(name : &str, r : T) -> ResTT<T>
     {
         ResTT {
@@ -59,24 +68,7 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         }
     }
 
-    pub fn new_instant(name : &str, rm : &mut ResourceManager<T>) -> ResTT<T>
-    {
-        let mut r = ResTT::new(name);
-        r.load_instant(rm);
-
-        r
-    }
-
-    pub fn new_with_res(name : &str, res : T) -> ResTT<T>
-    {
-        ResTT {
-            name : String::from(name),
-            resource : None,
-            instance : Some(res),
-        }
-    }
-
-    pub fn new_with_index(name : &str, res : usize) -> ResTT<T>
+    fn new_with_index(name : &str, res : usize) -> ResTT<T>
     {
         ResTT {
             name : String::from(name),
@@ -146,13 +138,18 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         }
     }
 
+
     pub fn as_ref<'a>(&'a self, manager : &'a ResourceManager<T>) -> Option<&'a T>
     {
-        if let Some(i) = self.resource {
-            manager.get_as_ref(i)
+        if self.instance.is_none() {
+            if let Some(i) = self.resource {
+                manager.get_as_ref(i)
+            }
+            else {
+                None
+            }
         }
         else {
-            //None
             self.instance.as_ref()
         }
     }
@@ -160,20 +157,6 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
     pub fn get_instance(&mut self) -> Option<&mut T>
     {
         self.instance.as_mut()
-    }
-
-    fn load_instant(&mut self, manager : &mut ResourceManager<T> )
-    {
-        self.resource = Some(manager.request_use_no_proc_new(self.name.as_ref()));
-    }
-
-    pub fn load_instant_no_manager(&mut self)
-    {
-        if self.instance.is_none() {
-            let mut mt : T = Create::create(self.name.as_ref());
-            mt.inittt();
-            self.instance = Some(mt);
-        }
     }
 
 }
@@ -211,7 +194,7 @@ impl <T:'static+Create+Send+Sync+Clone> ResTT<T>
         }
     }
 
-    pub fn create_instance(&mut self, manager : &ResourceManager<T>)
+    pub fn create_instance_with_manager(&mut self, manager : &ResourceManager<T>)
     {
         if self.instance.is_none() {
             if let Some(i) = self.resource {
@@ -615,6 +598,12 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         ResTT::new_with_index(name, i)
     }
 
+    pub fn get_handle_instant(&mut self, name : &str) -> ResTT<T>
+    {
+        let i = self.request_use_no_proc_new(name);
+        ResTT::new_with_index(name, i)
+    }
+
     //TODO
     pub fn request_use_no_proc_new(&mut self, name : &str) -> usize
     {
@@ -735,7 +724,7 @@ impl<T:'static+Clone+Create+Sync+Send> ResourceManager<T> {
     {
         let i = self.request_use_no_proc_new(name);
         let mut t = ResTT::new_with_index(name, i);
-        t.create_instance(self);
+        t.create_instance_with_manager(self);
         t
     }
 

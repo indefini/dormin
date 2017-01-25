@@ -133,10 +133,8 @@ impl MeshRenderer{
     pub fn with_names(mesh : &str, material : &str, resource : &resource::ResourceGroup) -> MeshRenderer
     {
         MeshRenderer {
-            //mesh : resource.mesh_manager.borrow_mut().request_use_no_proc(mesh),
-            //material : resource.material_manager.borrow_mut().request_use_no_proc(material),
-            mesh : ResTT::new_instant(mesh, &mut *resource.mesh_manager.borrow_mut()),
-            material : ResTT::new_instant(material, &mut *resource.material_manager.borrow_mut()),
+            mesh : resource.mesh_manager.borrow_mut().get_handle_instant(mesh),
+            material : resource.material_manager.borrow_mut().get_handle_instant(material),
             mesh_instance : None,
             material_instance : None,
         }
@@ -155,8 +153,7 @@ impl MeshRenderer{
     {
         MeshRenderer {
             mesh : mesh,
-            //material : resource.material_manager.borrow_mut().request_use_no_proc(material.as_ref()),
-            material : ResTT::new_instant(material, &mut *resource.material_manager.borrow_mut()),
+            material : resource.material_manager.borrow_mut().get_handle_instant(material),
             mesh_instance : None,
             material_instance : None,
         }
@@ -170,7 +167,7 @@ impl MeshRenderer{
         MeshRenderer {
             //TODO
             mesh : ResTT::new_with_instance("none", mesh),
-            material : ResTT::new_instant(material, &mut *resource.material_manager.borrow_mut()),
+            material : resource.material_manager.borrow_mut().get_handle_instant(material),
             mesh_instance : None,
             material_instance : None,
         }
@@ -182,8 +179,7 @@ impl MeshRenderer{
         resource : &resource::ResourceGroup) -> MeshRenderer
     {
         MeshRenderer {
-            //mesh : resource.mesh_manager.borrow_mut().request_use_no_proc(mesh.as_ref()),
-            mesh : ResTT::new_instant(mesh, &mut *resource.mesh_manager.borrow_mut()),
+            mesh : resource.mesh_manager.borrow_mut().get_handle_instant(mesh),
             material : ResTT::new_with_instance("no_name", material),
             mesh_instance : None,
             material_instance : None,
@@ -197,8 +193,7 @@ impl MeshRenderer{
         resource : &resource::ResourceGroup) -> MeshRenderer
     {
         MeshRenderer {
-            //mesh : resource.mesh_manager.borrow_mut().request_use_no_proc(mesh.as_ref()),
-            mesh : ResTT::new_instant(mesh, &mut *resource.mesh_manager.borrow_mut()),
+            mesh : resource.mesh_manager.borrow_mut().get_handle_instant(mesh),
             material : material,
             mesh_instance : None,
             material_instance : None,
