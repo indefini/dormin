@@ -712,11 +712,12 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     }
 
 
-    pub fn get_or_create(&mut self, name : &str) -> Option<&mut T>
+    pub fn get_or_create(&mut self, name : &str) -> &mut T
     {
         let index = self.request_use_no_proc_new(name);
-        Some(self.get_from_index2(index))
+        self.get_from_index2(index)
     }
+
 }
 
 impl<T:'static+Clone+Create+Sync+Send> ResourceManager<T> {

@@ -114,7 +114,6 @@ impl RenderPass
         load : Arc<Mutex<usize>>
         ) -> usize
     {
-        println!("-------->>>>>>>> will draw frame with shader : {}", self.shader.name);
         //let shader = &mut *self.shader.write().unwrap();
         let shader_manager = &mut *resource.shader_manager.borrow_mut();
         let shader = self.shader.get_from_manager_instant(shader_manager);
@@ -139,7 +138,6 @@ impl RenderPass
 
             for o in p.objects.iter() {
                 let mut ob = o.write().unwrap();
-                println!("drawing : {}", ob.name);
                 let not = self.draw_object(
                     shader,
                     &mut *ob,
@@ -151,8 +149,6 @@ impl RenderPass
                 not_loaded += not;
             }
         }
-
-        println!("<<<<<<<<-------- will draw frame with shader : {}", self.shader.name);
 
         not_loaded
     }
@@ -183,7 +179,6 @@ impl RenderPass
         load : Arc<Mutex<usize>>
         ) -> usize
     {
-        println!("start draw object : {}", ob.name);
         let mut not_loaded = 0;
 
         if ob.mesh_render.is_none() {
@@ -199,7 +194,6 @@ impl RenderPass
 
             //let m = &mut mr.material.write().unwrap();
             let material_manager = &mut *resource.material_manager.borrow_mut();
-            println!("  start draw object : material : {:?}", mr.material);
             let m = mr.material.get(material_manager).unwrap();
 
             object_init_mat(m, shader, resource, load)
@@ -215,7 +209,6 @@ impl RenderPass
 
             //let m = &mut mr.mesh.write().unwrap();
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
-            println!("  start draw object : mesh : {:?}", mr.mesh);
 
             let m = mr.mesh.get(mesh_manager).unwrap();
             object_init_mesh(m, shader)
@@ -223,8 +216,6 @@ impl RenderPass
 
         let (can_render, vertex_data_count) = init_mesh(ob.mesh_render.as_mut().unwrap());
 
-
-            println!("  start draw object : can : {}, count {}", can_render, vertex_data_count);
         if can_render {
 
             let object_mat = ob.get_world_matrix();
@@ -240,7 +231,6 @@ impl RenderPass
                 //let m = &mut mr.mesh.write().unwrap();
                 let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
                 let m = mr.mesh.get(mesh_manager).unwrap();
-                println!(" DRAW MESH: {}", m.name);
                 object_draw_mesh(m, vertex_data_count);
             };
 
@@ -561,7 +551,8 @@ impl Render {
 
     pub fn draw(
         &mut self,
-        objects : &[Arc<RwLock<object::Object>>], cameras: &[Arc<RwLock<object::Object>>],
+        objects : &[Arc<RwLock<object::Object>>],
+        cameras: &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
         draggers : &[Arc<RwLock<object::Object>>],
         on_finish : &Fn(bool),
@@ -1043,23 +1034,14 @@ fn object_init_mat(
             },
             material::Sampler::Fbo(ref mut fbo, ref attachment) => {
                 let mut rm = resource.fbo_manager.borrow_mut();
-                let yep = rm.get_or_create(fbo.name.as_str());
-                match yep {
-                    Some(yoyo) => {
-                        let fbosamp = uniform::FboSampler { 
-                            //fbo : & *fff,
-                            fbo : yoyo,
-                            attachment : *attachment
-                        };
-                        shader.texture_set(name.as_ref(), &fbosamp,i);
-                        i = i +1;
-                    },
-                    None => {
-                        not_loaded = not_loaded +1;
-                    }
-                }
+                let yoyo = rm.get_or_create(fbo.name.as_str());
+                let fbosamp = uniform::FboSampler { 
+                    fbo : yoyo,
+                    attachment : *attachment
+                };
+                shader.texture_set(name.as_ref(), &fbosamp,i);
+                i = i +1;
             },
-            //_ => {println!("todo fbo"); }
         }
     }
 

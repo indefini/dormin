@@ -28,7 +28,11 @@ impl IntersectionRay
     }
 }
 
-pub fn ray_object(ray : &geometry::Ray, o : &object::Object, resource : &resource::ResourceGroup) -> IntersectionRay
+pub fn ray_object(
+    ray : &geometry::Ray,
+    o : &object::Object,
+    resource : &resource::ResourceGroup
+    ) -> IntersectionRay
 {
     let out = IntersectionRay::new();
 
@@ -74,7 +78,10 @@ pub fn ray_mesh(
     let newray = geometry::Ray::new(start, direction);
 
     let vertices = match m.buffer_f32_get("position") {
-        None => return out,
+        None => {
+            println!("ray_mesh, no position stuff");
+            return out
+        },
         Some(v) => v
     };
 
@@ -88,7 +95,10 @@ pub fn ray_mesh(
     }
 
     match m.buffer_u32_get("faces"){
-        None => return out,
+        None => {
+            println!("ray_mesh, no faces stuff");
+            return out
+        },
         Some(ref b) => {
             //for i in range_step(0, b.data.len(), 3) {
             for i in (0..b.data.len()).step_by(3) {
