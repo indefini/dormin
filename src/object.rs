@@ -205,24 +205,30 @@ impl Object
     }
 
     //TODO remove
-    pub fn set_uniform_data(&self, name : &str, data : shader::UniformData)
+    pub fn set_uniform_data(
+        &mut self,
+        name : &str,
+        data : shader::UniformData)
     {
         let render = match self.mesh_render {
-            Some(ref r) => r,
+            Some(ref mut r) => r,
             None => return
         };
 
-        render.material.write().unwrap().set_uniform_data(name, data);
+        //render.material.write().unwrap().set_uniform_data(name, data);
+        render.material.get_instance().unwrap().set_uniform_data(name, data);
     }
 
-    pub fn get_material(&self) -> Option<Arc<RwLock<material::Material>>>
+    //pub fn get_material(&self) -> Option<Arc<RwLock<material::Material>>>
+    pub fn get_material(&mut self) -> Option<&mut material::Material>
     {
         let render = match self.mesh_render {
-            Some(ref r) => r,
+            Some(ref mut r) => r,
             None => return None
         };
 
-        Some(render.material.clone())
+        //Some(render.material.clone())
+        render.material.get_instance()
     }
 
     fn luastuff(&mut self, dt : f64)
@@ -368,7 +374,11 @@ impl Object
 
     }
 
-    pub fn update(&mut self, dt : f64, input : &input::Input)
+    pub fn update(
+        &mut self,
+        dt : f64,
+        input : &input::Input,
+        resource : &resource::ResourceGroup)
     {
         self.luastuff(dt);
 
@@ -382,7 +392,7 @@ impl Object
 
             self.components.push(box Components::Empty);
             let mut c = self.components.swap_remove(index);
-            c.update(self, dt, input);
+            c.update(self, dt, input, resource);
             self.components[index] = c;
             index = index +1;
         }

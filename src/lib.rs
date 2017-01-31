@@ -3,8 +3,6 @@
 #![feature(zero_one)]
 #![feature(associated_consts)]
 
-#![feature(vec_push_all)]
-
 //TODO remove
 #![allow(unused_variables)]
 #![allow(dead_code)]

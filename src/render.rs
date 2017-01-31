@@ -8,6 +8,7 @@ use std::collections::hash_map::Entry::{Occupied,Vacant};
 use uuid;
 
 use resource;
+use resource::ResTT;
 use shader;
 use material;
 use mesh;
@@ -88,21 +89,20 @@ impl CameraPass
 struct RenderPass
 {
     pub name : String,
-    //pub material : Arc<sync::RwLock<material::Material>>,
-    pub shader : Arc<sync::RwLock<shader::Shader>>,
-    //pub camera : Rc<RefCell<camera::Camera>>,
+    //pub shader : Arc<RwLock<shader::Shader>>,
+    pub shader : ResTT<shader::Shader>,
     pub passes : HashMap<uuid::Uuid, Box<CameraPass>>,
 }
 
 impl RenderPass
 {
     pub fn new(
-        shader : Arc<RwLock<shader::Shader>>,
+        shader : ResTT<shader::Shader>, //Arc<RwLock<shader::Shader>>,
         camera : Rc<RefCell<camera::Camera>>) -> RenderPass
     {
         RenderPass {
                   name : String::from("passtest"),
-                  shader : shader.clone(),
+                  shader : shader,//.clone(),
                   //camera : camera,
                   passes : HashMap::new()
               }
@@ -114,7 +114,9 @@ impl RenderPass
         load : Arc<Mutex<usize>>
         ) -> usize
     {
-        let shader = &mut *self.shader.write().unwrap();
+        //let shader = &mut *self.shader.write().unwrap();
+        let shader_manager = &mut *resource.shader_manager.borrow_mut();
+        let shader = self.shader.get_from_manager_instant(shader_manager);
 
         if shader.state == 0 {
             shader.read();
@@ -180,6 +182,7 @@ impl RenderPass
         let mut not_loaded = 0;
 
         if ob.mesh_render.is_none() {
+            println!("return no mesh_render : {}", ob.name);
             return not_loaded;
         }
 
@@ -189,9 +192,11 @@ impl RenderPass
                 return object_init_mat(m, shader, resource, load);
             }
 
-            let m = &mut mr.material.write().unwrap();
+            //let m = &mut mr.material.write().unwrap();
+            let material_manager = &mut *resource.material_manager.borrow_mut();
+            let m = mr.material.get(material_manager).unwrap();
+
             object_init_mat(m, shader, resource, load)
-            
         };
 
         not_loaded = init_material(ob.mesh_render.as_mut().unwrap());
@@ -202,7 +207,10 @@ impl RenderPass
                 return object_init_mesh(m, shader);
             }
 
-            let m = &mut mr.mesh.write().unwrap();
+            //let m = &mut mr.mesh.write().unwrap();
+            let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
+
+            let m = mr.mesh.get(mesh_manager).unwrap();
             object_init_mesh(m, shader)
         };
 
@@ -220,7 +228,9 @@ impl RenderPass
                     return object_draw_mesh(m, vertex_data_count);
                 }
 
-                let m = &mut mr.mesh.write().unwrap();
+                //let m = &mut mr.mesh.write().unwrap();
+                let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
+                let m = mr.mesh.get(mesh_manager).unwrap();
                 object_draw_mesh(m, vertex_data_count);
             };
 
@@ -240,8 +250,10 @@ pub struct Render
     camera : Rc<RefCell<camera::Camera>>,
     camera_ortho : Rc<RefCell<camera::Camera>>,
 
-    fbo_all : Arc<RwLock<fbo::Fbo>>,
-    fbo_selected : Arc<RwLock<fbo::Fbo>>,
+    //fbo_all : Arc<RwLock<fbo::Fbo>>,
+    //fbo_selected : Arc<RwLock<fbo::Fbo>>,
+    fbo_all : usize,
+    fbo_selected : usize,
 
     quad_outline : Arc<RwLock<object::Object>>,
     quad_all : Arc<RwLock<object::Object>>,
@@ -263,8 +275,9 @@ impl Render {
                //dragger : Arc<RwLock<object::Object>>,
                ) -> Render
     {
-        let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_all");
-        let fbo_selected = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_selected");
+        //let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_all");
+        let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_all");
+        let fbo_selected = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_selected");
 
         let camera_ortho = Rc::new(RefCell::new(factory.create_camera()));
         {
@@ -299,8 +312,9 @@ impl Render {
         let material_manager = &resource.material_manager;
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            create_grid(&mut *m.write().unwrap(), 100i32, 1i32);
+            //let m = Arc::new(RwLock::new(mesh::Mesh::new()));
+            let mut m = mesh::Mesh::new();
+            create_grid(&mut m, 100i32, 1i32);
 
             let mere = mesh_render::MeshRenderer::new_with_mesh(
                 m,
@@ -310,8 +324,9 @@ impl Render {
         }
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            create_repere(&mut *m.write().unwrap(), 40f64 );
+            //let m = Arc::new(RwLock::new(mesh::Mesh::new()));
+            let mut m = mesh::Mesh::new();
+            create_repere(&mut m, 40f64 );
 
             let mere = mesh_render::MeshRenderer::new_with_mesh(
                 m,
@@ -321,30 +336,29 @@ impl Render {
         }
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            m.write().unwrap().add_quad(1f32, 1f32);
+            let mut m = mesh::Mesh::new();
+            m.add_quad(1f32, 1f32);
 
-            shader_manager.borrow_mut().request_use_no_proc("shader/outline.sh");
-            let outline_mat = material_manager.borrow_mut().request_use_no_proc("material/outline.mat");
+            shader_manager.borrow_mut().request_use_no_proc_new("shader/outline.sh");
+            let outline_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/outline.mat");
 
-            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat(m, outline_mat);
+            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat_res(ResTT::new_with_instance("outline_quad", m), outline_mat);
             r.quad_outline.write().unwrap().mesh_render = Some(mere);
         }
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-            m.write().unwrap().add_quad(1f32, 1f32);
+            let mut m = mesh::Mesh::new();
+            m.add_quad(1f32, 1f32);
 
             //shader_manager.write().unwrap().request_use_no_proc("shader/all.sh");
-            let all_mat = material_manager.borrow_mut().request_use_no_proc("material/fbo_all.mat");
+            let all_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/fbo_all.mat");
 
-            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat(m, all_mat);
+            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat_res(ResTT::new_with_instance("quad_all", m), all_mat);
             r.quad_all.write().unwrap().mesh_render = Some(mere);
         }
 
         {
-            let m = Arc::new(RwLock::new(mesh::Mesh::new()));
-
+            let m = mesh::Mesh::new();
             let mere = mesh_render::MeshRenderer::new_with_mesh(
                 m,
                 "material/line.mat",
@@ -357,8 +371,16 @@ impl Render {
 
     pub fn init(&mut self)
     {
-        self.fbo_all.write().unwrap().cgl_create();
-        self.fbo_selected.write().unwrap().cgl_create();
+        //self.fbo_all.write().unwrap().cgl_create();
+        let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
+        {
+            let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
+            //fbo_all.write().unwrap().cgl_create();
+            fbo_all.cgl_create();
+        }
+
+        let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
+        fbo_sel.cgl_create();
     }
 
     pub fn resize(&mut self, w : c_int, h : c_int)
@@ -376,8 +398,18 @@ impl Render {
             let mut cam_ortho = self.camera_ortho.borrow_mut();
             cam_ortho.set_resolution(w, h);
 
-            self.fbo_all.write().unwrap().cgl_resize(w, h);
-            self.fbo_selected.write().unwrap().cgl_resize(w, h);
+            //self.fbo_all.write().unwrap().cgl_resize(w, h);
+            //let fbo_all = &self.resource.fbo_manager.borrow().get_from_state(self.fbo_all);
+            //fbo_all.write().unwrap().cgl_resize(w, h);
+            let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
+            {
+                let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
+                fbo_all.cgl_resize(w, h);
+                //    self.fbo_selected.write().unwrap().cgl_resize(w, h);
+            }
+
+            let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
+            fbo_sel.cgl_resize(w,h);
         }
 
         self.resolution_set(w,h);
@@ -386,7 +418,7 @@ impl Render {
 
     fn resolution_set(&mut self, w : c_int, h : c_int)
     {
-        self.quad_outline.read().unwrap().set_uniform_data(
+        self.quad_outline.write().unwrap().set_uniform_data(
             "resolution",
             shader::UniformData::Vec2(vec::Vec2::new(w as f64, h as f64)));
 
@@ -406,10 +438,10 @@ impl Render {
         }
 
         {
-            let line : &object::Object = &self.line.read().unwrap();
-            if let Some(ref mr) = line.mesh_render
+            let line : &mut object::Object = &mut *self.line.write().unwrap();
+            if let Some(ref mut mr) = line.mesh_render
             {
-                let mut mesh = mr.mesh.write().unwrap();
+                let mesh = &mut mr.mesh.get_instance().unwrap();//.write().unwrap();
                 mesh.clear_lines();
             }
         }
@@ -432,10 +464,10 @@ impl Render {
                     let armature = &aa.arm_instance;
                     let color = vec::Vec4::new(1f64,1f64,1f64,1.0f64);
 
-                    let line : &object::Object = &self.line.read().unwrap();
-                    if let Some(ref mr) = line.mesh_render
+                    let line : &mut object::Object = &mut *self.line.write().unwrap();
+                    if let Some(ref mut mr) = line.mesh_render
                     {
-                        let mut mesh = mr.mesh.write().unwrap();
+                        let mesh = &mut mr.mesh.get_instance().unwrap();
 
                         let arm_pos = ob.position + ob.orientation.rotate_vec3(&(armature.position*ob.scale));
                         let cur_rot = ob.orientation.as_quat() * armature.rotation;
@@ -456,31 +488,6 @@ impl Render {
                 None => {}// println!("{} nooooooo", ob.name)}
             };
         }
-
-        prepare_passes_object(
-            self.grid.clone(),
-            &mut self.passes,
-            &mut self.resource.material_manager.borrow_mut(),
-            &mut self.resource.shader_manager.borrow_mut(),
-            self.camera.clone());
-
-        let m = 40f64;
-        self.camera_repere.write().unwrap().position = 
-            vec::Vec3::new(
-                -self.camera_ortho.borrow().data.width/2f64 +m, 
-                -self.camera_ortho.borrow().data.height/2f64 +m, 
-                -10f64);
-        let camera = 
-            self.camera.borrow();
-        self.camera_repere.write().unwrap().orientation = 
-            camera.object.read().unwrap().orientation.inverse();
-
-        prepare_passes_object(
-            self.camera_repere.clone(),
-            &mut self.passes,
-            &mut self.resource.material_manager.borrow_mut(),
-            &mut self.resource.shader_manager.borrow_mut(),
-            self.camera_ortho.clone());
     }
 
     fn prepare_passes_selected(
@@ -554,7 +561,12 @@ impl Render {
     {
         let mut not_loaded = 0;
         self.prepare_passes_selected(selected);
-        self.fbo_selected.read().unwrap().cgl_use();
+        //self.fbo_selected.read().unwrap().cgl_use();
+        {
+        let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
+        let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
+        fbo_sel.cgl_use();
+        }
         for p in self.passes.values()
         {
             let not = p.draw_frame(
@@ -570,7 +582,41 @@ impl Render {
         self.add_objects_to_passes(objects);
         self.add_objects_to_passes(cameras);
 
-        self.fbo_all.read().unwrap().cgl_use();
+        {
+        prepare_passes_object(
+            self.grid.clone(),
+            &mut self.passes,
+            &mut self.resource.material_manager.borrow_mut(),
+            &mut self.resource.shader_manager.borrow_mut(),
+            self.camera.clone());
+
+        let m = 40f64;
+        self.camera_repere.write().unwrap().position = 
+            vec::Vec3::new(
+                -self.camera_ortho.borrow().data.width/2f64 +m, 
+                -self.camera_ortho.borrow().data.height/2f64 +m, 
+                -10f64);
+        let camera = 
+            self.camera.borrow();
+        self.camera_repere.write().unwrap().orientation = 
+            camera.object.read().unwrap().orientation.inverse();
+
+        prepare_passes_object(
+            self.camera_repere.clone(),
+            &mut self.passes,
+            &mut self.resource.material_manager.borrow_mut(),
+            &mut self.resource.shader_manager.borrow_mut(),
+            self.camera_ortho.clone());
+        }
+
+        {
+        //self.fbo_all.read().unwrap().cgl_use();
+        //let fbo_all = &self.resource.fbo_manager.borrow().get_from_state(self.fbo_all);
+        //fbo_all.write().unwrap().cgl_use();
+        
+        let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
+        let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
+        fbo_all.cgl_use();
         for p in self.passes.values()
         {
             let not = p.draw_frame(
@@ -581,6 +627,7 @@ impl Render {
             not_loaded = not_loaded + not;
         }
         fbo::Fbo::cgl_use_end();
+        }
 
         /*
         for p in self.passes.values()
@@ -716,32 +763,47 @@ fn prepare_passes_object(
     {
         let oc = o.clone();
         let mut occ = oc.write().unwrap();
+        let name = occ.name.clone();
         let render = &mut occ.mesh_render;
 
         let mat = match *render {
             Some(ref mut mr) => { 
-                &mr.material
+                &mut mr.material
             },
-            None => return
+            None => {
+                println!("{}, no mesh render, return", name);
+                return
+            }
         };
 
-        let mmm = &mut mat.write().unwrap().shader;
+        //let mmm = &mut mat.write().unwrap().shader;
+        let matname = mat.name.clone();
+        let mmm = &mut mat.get_no_load(material_manager).unwrap().shader;
 
         let mut shader_yep = match *mmm {
             Some(ref mut s) => s,
-            None =>  return
+            None =>  {
+                println!("{}, material problem, return, {}", name, matname);
+                return
+            }
         };
 
+        let shader_copy = shader_yep.clone();
+        let shadername = shader_yep.name.clone();
         let shader = match shader_yep.get_resource(shader_manager, load) {
+        //let shader = match shader_yep.get_no_load(shader_manager) {
             Some(s) => s,
-            None => return
+            None => {
+                println!("{}, shader problem, return, {}", name, shadername);
+                return
+            }
         };
 
         {
-            let key = shader.read().unwrap().name.clone();
+            let key = shader.name.clone();
             let rp = match passes.entry(key) {
                 Vacant(entry) => 
-                    entry.insert(box RenderPass::new(shader.clone(), camera.clone())),
+                    entry.insert(box RenderPass::new(shader_copy, camera.clone())),
                 Occupied(entry) => entry.into_mut(),
             };
 
@@ -922,16 +984,6 @@ impl GameRender {
     }
 }
 
-fn get_mesh_render(ob : &mut object::Object, resource : &resource::ResourceGroup) -> 
-Option<(Arc<RwLock<material::Material>>, Arc<RwLock<mesh::Mesh>>)>
-{
-    match ob.mesh_render {
-        Some(ref mr) => Some((mr.material.clone(), mr.mesh.clone())),
-        None => None
-    }
-}
-
-
 fn object_init_mat(
         material : &mut material::Material,
         shader : &shader::Shader,
@@ -964,10 +1016,10 @@ fn object_init_mat(
     for (name,t) in material.textures.iter_mut() {
         match *t {
             material::Sampler::ImageFile(ref mut img) => {
-                let r = resource::resource_get(&mut *resource.texture_manager.borrow_mut(), img, load.clone());
+                let texture_manager = &mut *resource.texture_manager.borrow_mut();
+                let r = resource::resource_get(texture_manager, img, load.clone());
                 match r {
-                    Some(t) => {
-                        let mut tex = t.write().unwrap();
+                    Some(tex) => {
                         if tex.state == 1 {
                             tex.init();
                         }
@@ -981,25 +1033,15 @@ fn object_init_mat(
                 }
             },
             material::Sampler::Fbo(ref mut fbo, ref attachment) => {
-                let yep = resource::resource_get(&mut *resource.fbo_manager.borrow_mut(), fbo, load.clone());
-                match yep {
-                    Some(yoyo) => {
-                        let fc = yoyo.clone();
-                        let fff = fc.read().unwrap();
-                        let fbosamp = uniform::FboSampler { 
-                            fbo : & *fff,
-                            attachment : *attachment
-                        };
-                        //shader.texture_set(name.as_ref(), & *yoyo.read().unwrap(),i);
-                        shader.texture_set(name.as_ref(), &fbosamp,i);
-                        i = i +1;
-                    },
-                    None => {
-                        not_loaded = not_loaded +1;
-                    }
-                }
+                let mut rm = resource.fbo_manager.borrow_mut();
+                let yoyo = rm.get_or_create(fbo.name.as_str());
+                let fbosamp = uniform::FboSampler { 
+                    fbo : yoyo,
+                    attachment : *attachment
+                };
+                shader.texture_set(name.as_ref(), &fbosamp,i);
+                i = i +1;
             },
-            //_ => {println!("todo fbo"); }
         }
     }
 

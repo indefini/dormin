@@ -28,7 +28,11 @@ impl IntersectionRay
     }
 }
 
-pub fn ray_object(ray : &geometry::Ray, o : &object::Object) -> IntersectionRay
+pub fn ray_object(
+    ray : &geometry::Ray,
+    o : &object::Object,
+    resource : &resource::ResourceGroup
+    ) -> IntersectionRay
 {
     let out = IntersectionRay::new();
 
@@ -41,8 +45,10 @@ pub fn ray_object(ray : &geometry::Ray, o : &object::Object) -> IntersectionRay
 
             //TODO
             //let ir_box = ray_box(ray, .... 
+            //let m = &mr.mesh;
+            //ray_mesh(ray, &*m.read().unwrap(), &wp, &wq, &ws)
             let m = &mr.mesh;
-            ray_mesh(ray, &*m.read().unwrap(), &wp, &wq, &ws)
+            ray_mesh(ray, m.as_ref(&mut *resource.mesh_manager.borrow_mut()).unwrap(), &wp, &wq, &ws)
         }
     }
 }
@@ -72,7 +78,10 @@ pub fn ray_mesh(
     let newray = geometry::Ray::new(start, direction);
 
     let vertices = match m.buffer_f32_get("position") {
-        None => return out,
+        None => {
+            println!("ray_mesh, no position stuff");
+            return out
+        },
         Some(v) => v
     };
 
@@ -86,7 +95,10 @@ pub fn ray_mesh(
     }
 
     match m.buffer_u32_get("faces"){
-        None => return out,
+        None => {
+            println!("ray_mesh, no faces stuff");
+            return out
+        },
         Some(ref b) => {
             //for i in range_step(0, b.data.len(), 3) {
             for i in (0..b.data.len()).step_by(3) {
@@ -463,16 +475,23 @@ pub fn planes_is_box_in_allow_false_positives(planes : &[geometry::Plane], b : &
 
 
 
-pub fn is_object_in_planes(planes : &[geometry::Plane], o : &object::Object) 
+pub fn is_object_in_planes(
+    planes : &[geometry::Plane],
+    o : &object::Object,
+    resource : &resource::ResourceGroup
+    ) 
     -> bool
 {
-    let m = match o.mesh_render {
+    let mr = match o.mesh_render {
         None => 
             return is_position_in_planes(planes, o.position),
         Some(ref mr) => {
-            mr.mesh.read().unwrap()
+            mr
         }
     };
+
+    let mm = &mut *resource.mesh_manager.borrow_mut();
+    let m = mr.mesh.as_ref(mm).unwrap();
 
     //first test the box and then test the object/mesh
     if let Some(ref aa) = m.aabox {

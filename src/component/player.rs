@@ -48,7 +48,13 @@ impl Component for PlayerBehavior
     */
 
     //fn update(&mut self, dt : f64) {}
-    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input)
+    fn update(
+        &mut self,
+        ob : &mut Object,
+        dt : f64,
+        input : &input::Input,
+        resource : &resource::ResourceGroup
+        )
     {
         let speed = {
             match ob.get_mut_comp_data::<Player>(){

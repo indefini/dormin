@@ -16,7 +16,7 @@ use resource;
 pub struct Factory
 {
      id : u32,
-     pub mesh_manager : Arc<RwLock<resource::ResourceManager<mesh::Mesh>>>,
+     //pub mesh_manager : Arc<RwLock<resource::ResourceManager<mesh::Mesh>>>,
 }
 
 impl Factory {
@@ -25,7 +25,7 @@ impl Factory {
     {
         Factory {
             id: 0,
-            mesh_manager : Arc::new(RwLock::new(resource::ResourceManager::new())),
+            //mesh_manager : Arc::new(RwLock::new(resource::ResourceManager::new())),
         }
     }
 

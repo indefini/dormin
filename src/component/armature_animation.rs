@@ -30,7 +30,8 @@ pub struct ArmatureAnimation
 {
     state : State,
     //armature : armature::Armature,
-    armature : Arc<RwLock<armature::Armature>>,
+    //armature : Arc<RwLock<armature::Armature>>,
+    armature : resource::ResTT<armature::Armature>,
     pub arm_instance : armature::ArmatureInstance,
     mesh : Option<resource::ResTT<mesh::Mesh>>,
     action : Option<String>,
@@ -67,7 +68,13 @@ impl Component for ArmatureAnimation
     }
     */
 
-    fn update(&mut self, ob : &mut Object, dt : f64, input : &input::Input)
+    fn update(
+        &mut self,
+        ob : &mut Object,
+        dt : f64,
+        input : &input::Input,
+        resource : &resource::ResourceGroup
+        )
     {
         let mut mr = 
             if let Some(ref mut mr) = ob.mesh_render {
@@ -91,10 +98,15 @@ impl Component for ArmatureAnimation
             self.time = 0f64;
         }
 
-        self.arm_instance.set_pose(&*self.armature.read().unwrap(), action.as_str(), self.time);
+        let armature_manager = &mut *resource.armature_manager.borrow_mut();
+        let arm_base = self.armature.as_ref(armature_manager).unwrap();
+
+        self.arm_instance.set_pose(arm_base, action.as_str(), self.time);
 
         let base_mesh = mr.get_mesh();
-        let base = base_mesh.read().unwrap();
+        //let base = base_mesh.read().unwrap();
+        let mm = &mut *resource.mesh_manager.borrow_mut();
+        let base = base_mesh.as_ref(mm).unwrap();
         let mut mi = mr.get_or_create_mesh_instance();
         update_mesh_with_armature(&base, mi, &self.arm_instance);
 
@@ -126,8 +138,12 @@ pub fn new(ob : &Object, resource : &resource::ResourceGroup) -> Box<Components>
         }
     };
 
-    let armature = resource.armature_manager.borrow_mut().request_use_no_proc(arm.name.as_ref());
-    let instance = armature.read().unwrap().create_instance();
+    let armature_manager = &mut *resource.armature_manager.borrow_mut();
+    let armature = armature_manager.request_use_no_proc_tt(arm.name.as_ref());
+    let instance = {
+        let arm_base = armature.as_ref(armature_manager).unwrap();
+        arm_base.create_instance()
+    };
 
     let arm_anim = ArmatureAnimation {
         state : State::Idle,

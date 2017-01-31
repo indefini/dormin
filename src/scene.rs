@@ -345,10 +345,15 @@ impl Scene
     }
     */
 
-    pub fn update(&mut self, dt : f64, input : &input::Input)
+    pub fn update(
+        &mut self,
+        dt : f64,
+        input : &input::Input,
+        resource : &resource::ResourceGroup
+        )
     {
         for o in self.objects.iter() {
-            o.write().unwrap().update(dt, input);
+            o.write().unwrap().update(dt, input, resource);
         }
     }
 }
