@@ -97,13 +97,13 @@ struct RenderPass
 impl RenderPass
 {
     pub fn new(
-        shader : ResTT<shader::Shader>, //Arc<RwLock<shader::Shader>>,
-        camera : Rc<RefCell<camera::Camera>>) -> RenderPass
+        shader : ResTT<shader::Shader>
+        )
+        -> RenderPass
     {
         RenderPass {
                   name : String::from("passtest"),
                   shader : shader,//.clone(),
-                  //camera : camera,
                   passes : HashMap::new()
               }
     }
@@ -803,7 +803,7 @@ fn prepare_passes_object(
             let key = shader.name.clone();
             let rp = match passes.entry(key) {
                 Vacant(entry) => 
-                    entry.insert(box RenderPass::new(shader_copy, camera.clone())),
+                    entry.insert(box RenderPass::new(shader_copy)),
                 Occupied(entry) => entry.into_mut(),
             };
 
