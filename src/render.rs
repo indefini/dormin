@@ -67,6 +67,9 @@ pub extern fn resize_cb(r : *mut Render, w : c_int, h : c_int) -> () {
 struct CameraPass
 {
     camera : Rc<RefCell<camera::Camera>>,
+    //TODO remove objects from here
+    // we need : transform = worldmatrix, mesh_render = mesh + material, 
+    // mesh and material can be instances...
     objects : Vec<Arc<RwLock<object::Object>>>,
 }
 

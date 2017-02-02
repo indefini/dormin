@@ -107,6 +107,10 @@ impl Texture
                 self.state = 2;
             }
         }
+
+        if self.state == 2 {
+            self.image = None;
+        }
     }
 }
 

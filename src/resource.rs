@@ -37,6 +37,7 @@ pub struct ResTT<T>
     pub name : String,
     pub resource : Option<usize>,
     pub instance : Option<T>,
+    pub instance_managed : Option<usize>,
 }
 
 impl<T:Create+Send+Sync+'static> ResTT<T>
@@ -46,7 +47,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         ResTT {
             name : String::from(name),
             resource : None,
-            instance : None
+            instance : None,
+            instance_managed : None
         }
     }
 
@@ -64,7 +66,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         ResTT {
             name : String::from(name),
             resource : None,
-            instance : Some(r)
+            instance : Some(r),
+            instance_managed : None
         }
     }
 
@@ -73,7 +76,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         ResTT {
             name : String::from(name),
             resource : Some(res),
-            instance : None
+            instance : None,
+            instance_managed : None
         }
     }
 
@@ -165,10 +169,12 @@ impl<T> Clone for ResTT<T>
 {
     fn clone(&self) -> ResTT<T>
     {
+        println!("WARNING : clone for resource is TODO, because of instance");
         ResTT {
             name : self.name.clone(),
             resource : self.resource.clone(),
-            instance : None //TODO
+            instance : None, //TODO
+            instance_managed : None //TODO
         }
     }
 }
@@ -756,7 +762,8 @@ impl<T> Decodable for ResTT<T> {
                 ResTT{
                     name : try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
                     resource : None,
-                    instance : None
+                    instance : None,
+                    instance_managed : None
                 }
               )
         })
