@@ -163,6 +163,17 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         self.instance.as_mut()
     }
 
+    pub fn get_or_create_instance(&mut self) -> &mut T
+    {
+        if self.instance.is_none() {
+            let mut mt : T = Create::create(self.name.as_ref());
+            mt.inittt();
+            self.instance = Some(mt);
+        }
+
+        self.instance.as_mut().unwrap()
+    }
+
 }
 
 impl<T> Clone for ResTT<T>

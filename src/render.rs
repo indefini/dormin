@@ -71,6 +71,12 @@ struct CameraPass
     // we need : transform = worldmatrix, mesh_render = mesh + material, 
     // mesh and material can be instances...
     objects : Vec<Arc<RwLock<object::Object>>>,
+
+    /*
+    transform : Vec<usize>,
+    mesh : Vec<ResTT<mesh::Mesh>>,
+    material : Vec<ResTT<material::Material>>,
+    */
 }
 
 impl CameraPass
@@ -191,11 +197,6 @@ impl RenderPass
 
         let init_material = |mr : &mut mesh_render::MeshRenderer| -> usize
         {
-            if let Some(m) = mr.get_mat_instance() { 
-                return object_init_mat(m, shader, resource, load);
-            }
-
-            //let m = &mut mr.material.write().unwrap();
             let material_manager = &mut *resource.material_manager.borrow_mut();
             let m = mr.material.get(material_manager).unwrap();
 
@@ -206,11 +207,6 @@ impl RenderPass
 
         let init_mesh = |mr : &mut mesh_render::MeshRenderer|  -> (bool, usize)
         {
-            if let Some(m) = mr.get_mesh_instance() { 
-                return object_init_mesh(m, shader);
-            }
-
-            //let m = &mut mr.mesh.write().unwrap();
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
 
             let m = mr.mesh.get(mesh_manager).unwrap();
@@ -227,11 +223,6 @@ impl RenderPass
 
             let draw_mesh = |mr : &mut mesh_render::MeshRenderer|
             {
-                if let Some(m) = mr.get_mesh_instance() { 
-                    return object_draw_mesh(m, vertex_data_count);
-                }
-
-                //let m = &mut mr.mesh.write().unwrap();
                 let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
                 let m = mr.mesh.get(mesh_manager).unwrap();
                 object_draw_mesh(m, vertex_data_count);

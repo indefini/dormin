@@ -39,14 +39,8 @@ impl MeshRender
 #[derive(Clone)]
 pub struct MeshRenderer
 {
-    pub mesh : ResTT<mesh::Mesh>, //Arc<RwLock<mesh::Mesh>>,
-    pub material : ResTT<material::Material>,// Arc<RwLock<material::Material>>,
-
-    //pub mesh_instance : Option<Rc<RefCell<mesh::Mesh>>>,
-    //pub mesh_instance : Option<Arc<mesh::Mesh>>,
-    pub mesh_instance : Option<Box<mesh::Mesh>>,
-    //pub mesh_instance : Option<Rc<mesh::Mesh>>,
-    pub material_instance : Option<Box<material::Material>>,
+    pub mesh : ResTT<mesh::Mesh>,
+    pub material : ResTT<material::Material>,
 }
 
 impl Component for MeshRenderer
@@ -91,26 +85,12 @@ impl Component for MeshRenderer
 impl MeshRenderer{
     fn create_mesh_instance(&mut self) 
     {
-        //self.mesh_instance = Some(box self.mesh.read().unwrap().clone())
-        self.mesh_instance = Some(box self.mesh.get_instance().unwrap().clone())
+        self.mesh.create_instance();
     }
 
-    //TODO
-    //pub fn get_or_create_mesh_instance<'a>(&'a mut self) -> &'a mut Box<mesh::Mesh>
-    //pub fn get_or_create_mesh_instance<'a>(&'a mut self) -> &'a mut mesh::Mesh
     pub fn get_or_create_mesh_instance(& mut self) -> & mut mesh::Mesh
     {
-        if self.mesh_instance.is_none() {
-            panic!("mesh instance todo");
-            //self.mesh_instance = Some(box self.mesh.read().unwrap().clone())
-        }
-
-        //let yo = self.mesh_instance.unwrap();
-
-        match self.mesh_instance {
-            Some(ref mut mi) => &mut *mi,
-            None => panic!("impossible")
-        }
+        self.mesh.get_or_create_instance()
     }
 
     pub fn get_mesh(&self) -> ResTT<mesh::Mesh>// Arc<RwLock<mesh::Mesh>>
@@ -135,8 +115,6 @@ impl MeshRenderer{
         MeshRenderer {
             mesh : resource.mesh_manager.borrow_mut().get_handle_instant(mesh),
             material : resource.material_manager.borrow_mut().get_handle_instant(material),
-            mesh_instance : None,
-            material_instance : None,
         }
     }
 
@@ -154,8 +132,6 @@ impl MeshRenderer{
         MeshRenderer {
             mesh : mesh,
             material : resource.material_manager.borrow_mut().get_handle_instant(material),
-            mesh_instance : None,
-            material_instance : None,
         }
     }
 
@@ -168,8 +144,6 @@ impl MeshRenderer{
             //TODO
             mesh : ResTT::new_with_instance("none", mesh),
             material : resource.material_manager.borrow_mut().get_handle_instant(material),
-            mesh_instance : None,
-            material_instance : None,
         }
     }
 
@@ -181,8 +155,6 @@ impl MeshRenderer{
         MeshRenderer {
             mesh : resource.mesh_manager.borrow_mut().get_handle_instant(mesh),
             material : ResTT::new_with_instance("no_name", material),
-            mesh_instance : None,
-            material_instance : None,
         }
     }
 
@@ -195,8 +167,6 @@ impl MeshRenderer{
         MeshRenderer {
             mesh : resource.mesh_manager.borrow_mut().get_handle_instant(mesh),
             material : material,
-            mesh_instance : None,
-            material_instance : None,
         }
     }
 
@@ -209,8 +179,6 @@ impl MeshRenderer{
         MeshRenderer {
             mesh : mesh,
             material : material,
-            mesh_instance : None,
-            material_instance : None,
         }
     }
 
@@ -222,61 +190,8 @@ impl MeshRenderer{
         MeshRenderer {
             mesh : ResTT::new_with_instance("none", mesh),
             material : ResTT::new_with_instance("none", material),
-            mesh_instance : None,
-            material_instance : None,
         }
     }
-
-    pub fn get_mesh_mat_instance(&self) -> 
-        Option<(&material::Material, &mesh::Mesh)>
-        //Option<&'a mesh::Mesh>
-        {
-            let me =
-            match self.mesh_instance {
-                Some(ref m) => &*m,
-                None => return None
-            };
-
-            let ma =
-            match self.material_instance {
-                Some(ref m) => &*m,
-                None => return None
-            };
-
-            Some((ma,me))
-
-            /*
-            match (self.material_instance,self.mesh_instance) {
-                (Some(ref mat),  Some(ref mesh)) => Some((&*mat, &*mesh)),
-                (_,_) => None
-            }
-            */
-
-
-            /*
-            let mat = self.material.read();
-            let mesh = self.mesh.read();
-            (&*mat.unwrap(),
-            &*mesh.unwrap())
-            */
-        }
-
-    pub fn get_mat_instance(&mut self) -> Option<&mut material::Material>
-    {
-        match self.material_instance {
-            Some(ref mut m) => Some(&mut *m),
-            None => return None
-        }
-    }
-
-    pub fn get_mesh_instance(&mut self) -> Option<&mut mesh::Mesh>
-    {
-        match self.mesh_instance {
-            Some(ref mut m) => Some(&mut *m),
-            None => return None
-        }
-    }
-
 }
 
 pub fn new(ob : &Object, resource : &resource::ResourceGroup) -> Box<Component>
