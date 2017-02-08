@@ -1,9 +1,11 @@
-use vec;
 use std::ptr;
 use libc::{c_char};
 use std::ffi::CString;
 use std::ops::{Mul};
 use std::fmt;
+
+use vec;
+use matrix;
 
 #[derive(RustcDecodable, RustcEncodable, Clone, Copy)]
 pub enum Orientation
@@ -86,7 +88,7 @@ impl Orientation
         }
     }
 
-    pub fn set_and_keep_type(&mut self, ori : Orientation )
+    pub fn set_and_keep_type(&mut self, ori : Orientation)
     {
         match *self {
             Orientation::AngleXYZ(_) => 
@@ -100,7 +102,11 @@ impl Orientation
 #[derive(RustcDecodable, RustcEncodable, Clone)]
 pub struct Transform {
     pub position : vec::Vec3, 
-    pub orientation : Orientation
+    pub orientation : Orientation,
+    pub scale : vec::Vec3, 
+    dirty : bool,
+    //world_matrix : matrix::Matrix4
+    //local_matrix : matrix::Matrix4
 }
 
 impl Transform
@@ -109,7 +115,10 @@ impl Transform
     {
         Transform {
             position : vec::Vec3::zero(),
-            orientation : Orientation::Quat(vec::Quat::identity())
+            orientation : Orientation::Quat(vec::Quat::identity()),
+            scale : vec::Vec3::zero(),
+            dirty : false,
+            //world_matrix : matrix::Matrix4::identity()
         }
     }
 }

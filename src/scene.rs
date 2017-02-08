@@ -15,6 +15,8 @@ use camera;
 use component;
 use resource;
 
+use transform;
+
 pub struct Scene
 {
     pub name : String,
@@ -23,6 +25,50 @@ pub struct Scene
     pub cameras : Vec<Rc<RefCell<camera::Camera>>>,
 
     pub objects : Vec<Arc<RwLock<object::Object>>>,
+
+    pub transforms : Vec<transform::Transform>,
+}
+
+pub struct Object2
+{
+    pub name : String,
+    id : Uuid,
+    index : usize,
+    alive : bool
+}
+
+pub struct Scene2
+{
+    pub name : String,
+    pub id : Uuid,
+    pub camera : Option<Rc<RefCell<camera::Camera>>>,
+    pub cameras : Vec<Rc<RefCell<camera::Camera>>>,
+
+    //object identification
+    pub objects : Vec<Object2>,
+    //local transform
+    transforms : Vec<transform::Transform>,
+    //graph
+    childrens : Vec<Vec<usize>>,
+    parents : Vec<usize>,
+
+    //objects that are referenced by others,
+    //if removed/changed notice them... really notice them?
+    is_ref_by : Vec<Vec<usize>>,
+    has_ref_to : Vec<Vec<usize>>
+}
+
+struct ObRef
+{
+    index : usize,
+}
+
+impl Scene2
+{
+    fn get_from_index(&self) -> Option<Object2>
+    {
+        None
+    }
 }
 
 impl Scene
@@ -37,7 +83,8 @@ impl Scene
             id : id,
             objects : Vec::new(),
             camera : Some(cam),
-            cameras : cameras
+            cameras : cameras,
+            transforms : Vec::new()
         }
     }
 
@@ -383,6 +430,7 @@ impl Clone for Scene {
             camera : cam,
             cameras : self.cameras.clone(),
             objects : objects,
+            transforms : self.transforms.clone()
         }
     }
 }
@@ -395,7 +443,8 @@ impl Encodable for Scene {
           try!(encoder.emit_struct_field( "id", 1usize, |encoder| self.id.encode(encoder)));
           try!(encoder.emit_struct_field( "objects", 2usize, |encoder| self.objects.encode(encoder)));
           try!(encoder.emit_struct_field( "camera", 3usize, |encoder| self.camera.encode(encoder)));
-          //try!(encoder.emit_struct_field( "cameras", 4usize, |encoder| self.cameras.encode(encoder)));
+          try!(encoder.emit_struct_field( "transforms", 4usize, |encoder| self.transforms.encode(encoder)));
+          //try!(encoder.emit_struct_field( "cameras", 5usize, |encoder| self.cameras.encode(encoder)));
           Ok(())
       })
   }
@@ -414,6 +463,7 @@ impl Decodable for Scene {
           camera : try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder))),
           cameras : Vec::new(),// try!(decoder.read_struct_field("cameras", 0, |decoder| Decodable::decode(decoder)))
           //camera : None
+        transforms : Vec::new()
         })
     })
   }
