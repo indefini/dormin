@@ -54,13 +54,14 @@ pub struct Scene2
 
     //objects that are referenced by others,
     //if removed/changed notice them... really notice them?
-    is_ref_by : Vec<Vec<usize>>,
-    has_ref_to : Vec<Vec<usize>>
+    //is_ref_by : Vec<Vec<ObRef>>,
+    //has_ref_to : Vec<Vec<ObRef>>
 }
 
 struct ObRef
 {
     index : usize,
+    used_count : usize
 }
 
 impl Scene2
