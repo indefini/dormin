@@ -29,12 +29,37 @@ pub struct Scene
     pub transforms : Vec<transform::Transform>,
 }
 
+pub enum CompIdent {
+    String(String),
+    Enemy,
+}
+
+struct CompRef
+{
+    kind : String,
+    index : usize,
+    used_count : usize
+}
+
 pub struct Object2
 {
     pub name : String,
     id : Uuid,
     index : usize,
-    alive : bool
+    alive : bool,
+    used_count : usize,
+
+    components : Vec<CompRef>
+}
+
+impl Object2 {
+
+    fn as_ref(&self) -> ObRef {
+        ObRef {
+            index : self.index,
+            used_count : self.used_count
+        }
+    }
 }
 
 pub struct Scene2
@@ -49,8 +74,8 @@ pub struct Scene2
     //local transform
     transforms : Vec<transform::Transform>,
     //graph
-    childrens : Vec<Vec<usize>>,
-    parents : Vec<usize>,
+    children : Vec<Vec<usize>>,
+    parents : Vec<Option<usize>>,
 
     //objects that are referenced by others,
     //if removed/changed notice them... really notice them?
@@ -66,9 +91,117 @@ struct ObRef
 
 impl Scene2
 {
-    fn get_from_index(&self) -> Option<Object2>
+    fn get_mut(&mut self, oref : &ObRef) -> Option<&mut Object2>
     {
-        None
+        let o = &mut self.objects[oref.index];
+        if o.used_count == oref.used_count {
+            Some(o) 
+        }
+        else {
+            None
+        }
+    }
+
+    fn get(&mut self, oref : &ObRef) -> Option<&Object2>
+    {
+        let o = &self.objects[oref.index];
+        if o.used_count == oref.used_count {
+            Some(o) 
+        }
+        else {
+            None
+        }
+    }
+
+    fn set_parent(&mut self, o : &Object2, new_parent : Option<&Object2>)
+    {
+        if let Some(p) = new_parent {
+            self.parents[o.index] = Some(p.index);
+        }
+        else {
+            self.parents[o.index] = None;
+        }
+    }
+
+    fn add_child(&mut self, o : &Object2, child : &Object2)
+    {
+        if self.has_child(o, child) {
+            println!("already have this child");
+            return;
+        }
+        
+        self.children[o.index].push(child.index);
+    }
+
+    fn has_child(&self, o : &Object2, child : &Object2) -> bool
+    {
+        for c in &self.children[o.index]
+        {
+            if *c == child.index {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn remove_child(&mut self, o : &Object2, child : &Object2)
+    {
+        println!("TODO : don't test all! just remove and return");
+        self.children[o.index].retain(|&i| i != child.index);
+    }
+
+    fn remove_all_children(&mut self, o : &Object2)
+    {
+        self.children[o.index].clear();
+    }
+}
+
+struct Enemy {
+    target : Option<ObRef>,
+    speed : f64,
+}
+
+struct CompAll {
+    transform : Pool<transform::Transform>,
+    enemies : Pool<Enemy>
+}
+
+trait Comp2 {
+    fn new() -> Self;
+    fn reset(&mut self, scene : &mut Scene) {}
+    fn update(&mut self, ob : ObRef, scene : &mut Scene, comp_all : &CompAll) {}
+}
+
+pub struct Pool<T>
+{
+    data : Vec<T>,
+    //the number of unused cell starting from the end of the vec
+    unused : usize
+}
+
+impl<T> Pool<T>
+{
+    //fn get
+
+}
+
+impl Comp2 for Enemy {
+    fn new() -> Enemy {
+        Enemy {
+            target : None,
+            speed : 0f64
+        }
+    }
+
+    fn update(
+        &mut self,
+        ob : ObRef,
+        scene : &mut Scene,
+        comp_all : &CompAll) 
+    {
+        //let t = comp_all.transform.get(
+        //get my pos
     }
 }
 
