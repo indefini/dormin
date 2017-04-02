@@ -3,15 +3,23 @@ use libc::{c_char};
 use std::ffi::CString;
 use std::ops::{Mul};
 use std::fmt;
+use std::default::Default;
+use std::cell::Cell;
 
 use vec;
 use matrix;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Copy)]
+#[derive(RustcDecodable, RustcEncodable, Serialize, Deserialize, Clone, Copy)]
 pub enum Orientation
 {
     AngleXYZ(vec::Vec3),
     Quat(vec::Quat)
+}
+
+impl Default for Orientation {
+    fn default() -> Self {
+        Orientation::AngleXYZ(vec::Vec3::default())
+    }
 }
 
 impl Orientation
@@ -99,14 +107,15 @@ impl Orientation
     }
 }
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Transform {
     pub position : vec::Vec3, 
     pub orientation : Orientation,
     pub scale : vec::Vec3, 
+    #[serde(skip_serializing, skip_deserializing)]
     dirty : bool,
-    //world_matrix : matrix::Matrix4
-    //local_matrix : matrix::Matrix4
+    #[serde(skip_serializing, skip_deserializing)]
+    local_matrix : matrix::Matrix4
 }
 
 impl Transform
@@ -118,8 +127,38 @@ impl Transform
             orientation : Orientation::Quat(vec::Quat::identity()),
             scale : vec::Vec3::zero(),
             dirty : false,
-            //world_matrix : matrix::Matrix4::identity()
+            local_matrix : matrix::Matrix4::identity()
         }
+    }
+
+    pub fn get_or_compute_local_matrix(&mut self) -> &matrix::Matrix4
+    {
+        self.compute_local_matrix();
+        &self.local_matrix
+    }
+
+    pub fn get_computed_local_matrix(&self) -> &matrix::Matrix4
+    {
+        &self.local_matrix
+    }
+
+    pub fn compute_local_matrix(&mut self)
+    {
+        if self.dirty {
+            //TODO optim possible?
+            let mt = matrix::Matrix4::translation(self.position);
+            let mq = matrix::Matrix4::rotation(self.orientation.as_quat());
+            let ms = matrix::Matrix4::scale(self.scale);
+
+            self.local_matrix = &(&mt * &mq) * &ms;
+            self.dirty = false;
+        }
+    }
+
+    //TODO for debug
+    pub fn set_as_dirty(&mut self)
+    {
+        self.dirty = true;
     }
 }
 

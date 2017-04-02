@@ -149,13 +149,6 @@ pub struct Camera
     pub object_id : Option<uuid::Uuid>
 }
 
-pub struct CameraRom
-{
-    pub data : CameraData,
-    pub id : uuid::Uuid,
-    pub object_id : Option<uuid::Uuid>
-}
-
 impl Camera
 {
     pub fn get_perspective(&self) -> matrix::Matrix4

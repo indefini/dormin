@@ -100,6 +100,7 @@ struct RenderPass
     pub name : String,
     //pub shader : Arc<RwLock<shader::Shader>>,
     pub shader : ResTT<shader::Shader>,
+    //uuid is the camera id
     pub passes : HashMap<uuid::Uuid, Box<CameraPass>>,
 }
 
@@ -1123,3 +1124,173 @@ fn object_draw_mesh(
     }
 }
 
+use camera2;
+struct RenderGroup<'a>
+{
+    camera : (&'a transform::Transform, &'a camera2::Camera),
+    renderables : &'a Iterator<Item=(&'a transform::Transform, component::mesh_render::MeshRenderer)>,
+}
+
+struct RenderByShader
+{
+    pub name : String,
+    pub shader : ResTT<shader::Shader>,
+    //TODO uncomment
+    //pub passes : Iterator<Item=RenderGroup<'a>>
+}
+
+pub struct NewRender
+{
+    //String is the name you want to give to the pass, for example the shader name
+    passes : HashMap<String, Box<RenderByShader>>,
+    resource: Rc<resource::ResourceGroup>,
+}
+
+pub struct CameraInfo<'a>
+{
+    // I need each camera data
+    cameras : &'a [camera2::Camera],
+    //and world matrix.... how to get the world matrix/transform
+    transform : &'a [transform::Transform],
+    //camera_owners : &'a Vec<usize>,
+    //transform_owners : &'a Vec<usize>,
+}
+
+use component;
+impl NewRender
+{
+    pub fn new(resource : Rc<resource::ResourceGroup>
+               ) -> NewRender
+    {
+        let r = NewRender { 
+            passes : HashMap::new(),
+            resource : resource,
+            //cameras : Vec::new() //camera2::Camera::default(),
+        };
+
+        r
+    }
+
+    pub fn init(&mut self)
+    {
+    }
+
+    pub fn resize(&mut self, w : c_int, h : c_int)
+    {
+        //self.camera.set_resolution(w, h);
+
+        //let mut cam_ortho = self.camera_ortho.borrow_mut();
+        //cam_ortho.set_resolution(w, h);
+    }
+
+    /*
+    fn prepare_passes_objects_per(
+        &mut self,
+        obs : &[Arc<RwLock<object::Object>>])
+    {
+        for (_,p) in self.passes.iter_mut()
+        {
+            p.passes.clear();
+        }
+
+        for o in obs.iter() {
+            prepare_passes_object(
+                o.clone(),
+                &mut self.passes,
+                &mut self.resource.material_manager.borrow_mut(),
+                &mut self.resource.shader_manager.borrow_mut(),
+                self.camera.clone());
+        }
+    }
+    */
+
+    pub fn draw(
+        &mut self,
+        //mesh : &[component::mesh_render::MeshRenderer],
+        //transform : &Iterator<Item=&transform::Transform>,
+        renderables : &Iterator<Item=(&transform::Transform, component::mesh_render::MeshRenderer)>,
+        loading : Arc<Mutex<usize>>
+        ) -> bool
+    {
+        /*
+        self.prepare_passes_objects_per(objects);
+
+        let mut not_yet_loaded = 0;
+        for p in self.passes.values()
+        {
+            let r = p.draw_frame(&self.resource, loading.clone());
+            not_yet_loaded += r;
+        }
+
+        not_yet_loaded > 0
+        */
+        false
+    }
+
+    pub fn draw_frame(
+        )
+    {
+
+    }
+
+    fn test<'a>(&self, v : &'a Vec<transform::Transform>) -> Vec<&'a transform::Transform>
+    {
+        struct Dance<'a> {
+            //it : &'a Iterator<Item=(usize,&'a transform::Transform)>
+            it : &'a Iterator<Item=&'a transform::Transform>
+        }
+        //let t : &Iterator<Item=(usize,&transform::Transform)> = &v.iter().enumerate().filter(|&(x,y)| x == 0) as &Iterator<Item=(usize,&transform::Transform)>;
+        let t : &Iterator<Item=&transform::Transform> = &v.iter().enumerate().filter_map(|(x,y)| if x == 0 { Some(y)} else { None});// as &Iterator<Item=(usize,&transform::Transform)>;
+
+        let d = Dance {
+            it : t
+        };
+
+        let vref : Vec<&transform::Transform> = v.iter().enumerate().filter_map(|(x,y)| if x == 0 { Some(y)} else { None}).collect();
+        vref
+    }
+
+}
+
+pub struct TransformGraph<'a>
+{
+    parents : Vec<Option<usize>>,
+    dirty : Vec<bool>,
+    transforms : &'a mut Vec<transform::Transform>,
+    matrix : Vec<matrix::Matrix4>,
+}
+
+/*
+impl<'a> TransformGraph
+{
+    fn new(t : &Transforms) -> TransformGraph
+    {
+        let s = t.len();
+        TransformGraph {
+            parents : vec![None,s],
+            dirty : vec![false,s],
+            transforms : t,
+            matrix : t.iter().map().
+
+        }
+    }
+}
+*/
+
+//T is the id of your object/entity
+pub fn get_transforms_of_objects_in_camera_frustum<'a, T>(
+    cam : &camera2::Camera,
+    //cam_trans : &matrix::Matrix4, 
+    world_matrices : &[(&'a T, &matrix::Matrix4)]
+    //world_matrices : &[(&'a T, &transform::Transform)]
+    ) -> Vec<&'a T> //usize or entity
+{
+    //world_matrices.iter().map(|x| x.0.clone()).collect()
+    world_matrices.iter().map(|x| x.0).collect()
+}
+
+fn test(w : &mut TransformGraph)
+{
+    let t : &mut transform::Transform = &mut w.transforms[0];
+    t.position.x = 5f64;
+}

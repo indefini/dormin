@@ -514,8 +514,10 @@ impl Scene
 
     pub fn savetoml(&self)
     {
-        let s = toml::encode_str(self);
-        println!("encoder toml : {} ", s );
+        //TODO
+        //let s = toml::encode_str(self);
+        //let s = toml::ser::to_string(self);
+        println!("encoder toml : {} ", "TODO" );
     }
 
     /*
@@ -577,7 +579,7 @@ impl Encodable for Scene {
           try!(encoder.emit_struct_field( "id", 1usize, |encoder| self.id.encode(encoder)));
           try!(encoder.emit_struct_field( "objects", 2usize, |encoder| self.objects.encode(encoder)));
           try!(encoder.emit_struct_field( "camera", 3usize, |encoder| self.camera.encode(encoder)));
-          try!(encoder.emit_struct_field( "transforms", 4usize, |encoder| self.transforms.encode(encoder)));
+          //try!(encoder.emit_struct_field( "transforms", 4usize, |encoder| self.transforms.encode(encoder)));
           //try!(encoder.emit_struct_field( "cameras", 5usize, |encoder| self.cameras.encode(encoder)));
           Ok(())
       })

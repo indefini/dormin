@@ -15,7 +15,11 @@
 #![feature(plugin)]
 //#![plugin(clippy)]
 
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 extern crate rustc_serialize;
+
 extern crate byteorder;
 extern crate libc;
 //extern crate sync;
@@ -58,6 +62,7 @@ mod uniform;
 mod matrix;
 mod vec;
 mod camera;
+mod camera2;
 mod scene;
 mod texture;
 mod geometry;

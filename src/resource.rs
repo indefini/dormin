@@ -34,6 +34,8 @@ pub trait ResourceT  {
 
 pub struct ResTT<T>
 {
+    //TODO remove instance (only have instance_managed);
+    // can we remove name?
     pub name : String,
     pub resource : Option<usize>,
     pub instance : Option<T>,
