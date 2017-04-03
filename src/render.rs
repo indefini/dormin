@@ -1280,9 +1280,8 @@ impl<'a> TransformGraph
 //T is the id of your object/entity
 pub fn get_transforms_of_objects_in_camera_frustum<'a, T>(
     cam : &camera2::Camera,
-    //cam_trans : &matrix::Matrix4, 
+    cam_mat : &matrix::Matrix4, 
     world_matrices : &[(&'a T, &matrix::Matrix4)]
-    //world_matrices : &[(&'a T, &transform::Transform)]
     ) -> Vec<&'a T> //usize or entity
 {
     //world_matrices.iter().map(|x| x.0.clone()).collect()
