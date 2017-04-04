@@ -1233,6 +1233,17 @@ impl NewRender
 
     }
 
+    /*
+    pub fn draw(
+        &self,
+        shader : &shader::Shader,
+        textures, uniforms, // Material_instance, shader_input...
+        mesh,
+        matrix)
+    {
+    }
+    */
+
     fn test<'a>(&self, v : &'a Vec<transform::Transform>) -> Vec<&'a transform::Transform>
     {
         struct Dance<'a> {
@@ -1293,3 +1304,23 @@ fn test(w : &mut TransformGraph)
     let t : &mut transform::Transform = &mut w.transforms[0];
     t.position.x = 5f64;
 }
+
+/*
+struct ShaderInput
+{
+    pub textures : HashMap<String, Sampler>,
+    //pub uniforms : HashMap<String, Box<UniformSend+'static>>,
+    pub uniforms : HashMap<String, Box<shader::UniformData>>,
+}
+
+struct RenderData<'a> {
+    mat : &'a Matrix,
+    input : &'a ShaderInput,
+}
+
+fn draw_stuff(shader : &Shader, r : &RenderData)
+{
+
+}
+*/
+
