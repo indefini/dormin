@@ -1281,11 +1281,11 @@ impl<'a> TransformGraph
 pub fn get_transforms_of_objects_in_camera_frustum<'a, T>(
     cam : &camera2::Camera,
     cam_mat : &matrix::Matrix4, 
-    world_matrices : &[(&'a T, &matrix::Matrix4)]
-    ) -> Vec<&'a T> //usize or entity
+    world_matrices : &[(&'a T, &'a matrix::Matrix4)]
+    ) -> Vec<(&'a T, &'a matrix::Matrix4)> //usize or entity
 {
     //TODO
-    world_matrices.iter().map(|x| x.0).collect()
+    world_matrices.iter().map(|x| *x).collect()
 }
 
 fn test(w : &mut TransformGraph)

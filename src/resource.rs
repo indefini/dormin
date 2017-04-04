@@ -176,6 +176,11 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         self.instance.as_mut().unwrap()
     }
 
+    pub fn is_instance(&self) -> bool
+    {
+        self.instance.is_some() || self.instance_managed.is_some()
+    }
+
 }
 
 impl<T> Clone for ResTT<T>
