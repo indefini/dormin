@@ -206,15 +206,15 @@ impl RenderPass
 
         not_loaded = init_material(ob.mesh_render.as_mut().unwrap());
 
-        let init_mesh = |mr : &mut mesh_render::MeshRenderer|  -> (bool, usize)
+        let init_mesh_render = |mr : &mut mesh_render::MeshRenderer|  -> (bool, usize)
         {
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
 
             let m = mr.mesh.get(mesh_manager).unwrap();
-            object_init_mesh(m, shader)
+            init_mesh(m, shader)
         };
 
-        let (can_render, vertex_data_count) = init_mesh(ob.mesh_render.as_mut().unwrap());
+        let (can_render, vertex_data_count) = init_mesh_render(ob.mesh_render.as_mut().unwrap());
 
         if can_render {
 
@@ -987,25 +987,6 @@ fn object_init_mat(
     ) -> usize
 {
     let mut not_loaded = 0;
-    /*
-    for (_,t) in material.textures.iter_mut() {
-        match *t {
-            material::Sampler::ImageFile(ref mut img) => {
-                let yep = resource::resource_get(&mut *resource.texture_manager.borrow_mut(), img);
-                match yep.clone() {
-                    None => {},
-                    Some(yy) => {
-                        let mut yoyo = yy.write().unwrap();
-                        if yoyo.state == 1 {
-                            yoyo.init();
-                        }
-                    }
-                }
-            },
-            _ => {} //fbo so nothing to do
-        }
-    }
-    */
 
     let mut i = 0u32;
     for (name,t) in material.textures.iter_mut() {
@@ -1047,7 +1028,7 @@ fn object_init_mat(
     not_loaded
 }
 
-fn object_init_mesh(
+fn init_mesh(
     mb : &mut mesh::Mesh,
     shader : &shader::Shader) -> (bool, usize)
 {
@@ -1305,22 +1286,24 @@ fn test(w : &mut TransformGraph)
     t.position.x = 5f64;
 }
 
-/*
 struct ShaderInput
 {
-    pub textures : HashMap<String, Sampler>,
+    pub textures : HashMap<String, material::Sampler>,
     //pub uniforms : HashMap<String, Box<UniformSend+'static>>,
     pub uniforms : HashMap<String, Box<shader::UniformData>>,
 }
 
 struct RenderData<'a> {
-    mat : &'a Matrix,
+    mat : &'a matrix::Matrix4,
     input : &'a ShaderInput,
 }
 
-fn draw_stuff(shader : &Shader, r : &RenderData)
+fn draw_mesh(shader : &shader::Shader, mesh : &mesh::Mesh)
 {
+    //mesh should not be mut
+    // but there is a call to init_buffers
+    // this part should be mut
+    //init_mesh(mesh);
 
 }
-*/
 
