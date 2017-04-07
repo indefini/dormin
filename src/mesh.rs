@@ -5,6 +5,7 @@ use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
 use std::io::Read;
+use std::cell::Cell;
 
 //use libc::{c_char, c_int, c_uint, c_void};
 use libc::{c_uint, c_void};
@@ -64,7 +65,7 @@ pub struct Buffer<T>
 {
     pub name: String,
     pub data : Vec<T>,
-    cgl_buffer: Option<*const CglBuffer>,
+    cgl_buffer: Cell<Option<*const CglBuffer>>,
     buffer_type : BufferType,
     //state : BufferState
 }
@@ -76,7 +77,7 @@ impl<T:Clone> Clone for Buffer<T>
         Buffer {
             name : self.name.clone(),
             data : self.data.clone(),
-            cgl_buffer : self.cgl_buffer,
+            cgl_buffer : self.cgl_buffer.clone(),
             buffer_type : self.buffer_type
         }
     }
@@ -95,7 +96,7 @@ impl<T:Clone> Buffer<T>
         Buffer {
             name : name,
             data : data,
-            cgl_buffer : None,
+            cgl_buffer : Cell::new(None),
             buffer_type : buffer_type,
             //state : BufferState::Created
         }
@@ -106,7 +107,7 @@ impl<T:Clone> Buffer<T>
         Buffer {
             name : self.name.clone(),
             data : self.data.clone(),
-            cgl_buffer : None,
+            cgl_buffer : Cell::new(None),
             buffer_type : self.buffer_type
         }
     }
@@ -114,7 +115,7 @@ impl<T:Clone> Buffer<T>
 
 pub trait BufferSend
 {
-    fn send(&mut self) -> ();
+    fn send(&self) -> ();
     fn utilise(&self, att : *const shader::CglShaderAttribute) ->();
     fn size_get(&self) -> usize;
     fn cgl_buffer_get(&self) -> Option<*const CglBuffer>;
@@ -127,9 +128,9 @@ impl<T: BufferSend + Clone> BufferSendTest for T {}
 */
 
 impl<T> BufferSend for Buffer<T> {
-    fn send(&mut self) -> ()
+    fn send(&self) -> ()
     {
-        match self.cgl_buffer {
+        match self.cgl_buffer.get() {
             Some(b) => unsafe {
                 cgl_buffer_update(
                     b,
@@ -145,19 +146,19 @@ impl<T> BufferSend for Buffer<T> {
                 let cgl_buffer = cgl_buffer_init(
                     mem::transmute(self.data.as_ptr()),
                     self.data.len() as c_uint);
-                self.cgl_buffer = Some(cgl_buffer);
+                self.cgl_buffer.set(Some(cgl_buffer));
             },
             BufferType::Index => unsafe {
                 let cgl_buffer = cgl_buffer_index_init(
                     mem::transmute(self.data.as_ptr()),
                     self.data.len() as c_uint);
-                self.cgl_buffer = Some(cgl_buffer);
+                self.cgl_buffer.set(Some(cgl_buffer));
             },
             _ => unsafe {
                 let cgl_buffer = cgl_buffer_init(
                     mem::transmute(self.data.as_ptr()),
                     self.data.len() as c_uint);
-                self.cgl_buffer = Some(cgl_buffer);
+                self.cgl_buffer.set(Some(cgl_buffer));
             }
         }
     }
@@ -181,7 +182,7 @@ impl<T> BufferSend for Buffer<T> {
 
     fn utilise(&self, att : *const shader::CglShaderAttribute) ->()
     {
-        match self.cgl_buffer {
+        match self.cgl_buffer.get() {
             Some(b) => unsafe {
                 cgl_shader_attribute_send(att, b);
             },
@@ -196,7 +197,7 @@ impl<T> BufferSend for Buffer<T> {
 
     fn cgl_buffer_get(&self) -> Option<*const CglBuffer>
     {
-        return self.cgl_buffer;
+        return self.cgl_buffer.get();
     }
 }
 

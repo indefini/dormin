@@ -392,13 +392,6 @@ impl Create for camera::Camera
     }
 }
 
-#[derive(Clone,Copy)]
-pub enum StateOld
-{
-    Loading(usize),
-    Using(usize),
-}
-
 pub enum State<T>
 {
     Loading(Option<thread::JoinHandle<()>>,Arc<RwLock<Option<T>>>),
@@ -466,10 +459,12 @@ impl<T> State<T>
 
 pub struct ResourceManager<T>
 {
+    //usize is the index in loaded vec of the resource
     map : HashMap<String, usize>,
     loaded : Vec<State<T>>,
+    state : Vec<usize>
 
-    // Other possible way
+    // Other possible ways
     //map : HashMap<String, usize>, => saves index to ids, and id never change
     //ids : Vec<State>,
     
@@ -494,6 +489,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         ResourceManager {
             map : HashMap::new(),
             loaded : Vec::new(),
+            state : Vec::new()
         }
     }
 
