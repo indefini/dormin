@@ -996,9 +996,8 @@ fn object_init_mat(
                 let r = resource::resource_get(texture_manager, img, load.clone());
                 match r {
                     Some(tex) => {
-                        if tex.state == 1 {
-                            tex.init();
-                        }
+                        tex.init();
+                        tex.release();
                         shader.texture_set(name.as_ref(), & *tex, i);
                         i = i +1;
                     },
@@ -1029,7 +1028,7 @@ fn object_init_mat(
 }
 
 fn init_mesh(
-    mb : &mut mesh::Mesh,
+    mb : &mesh::Mesh,
     shader : &shader::Shader) -> (bool, usize)
 {
     mb.init_buffers();
@@ -1296,16 +1295,29 @@ struct RenderData<'a> {
     input : &'a ShaderInput,
 }
 
-fn init_mesh2_test(manager : &mut resource::ResourceManager<mesh::Mesh>, mesh : &mesh::Mesh)
+fn draw(
+    camera_world : &matrix::Matrix4,
+    object_world : &matrix::Matrix4,
+    shader : &shader::Shader,
+    material : &material::Material,
+    resource : &resource::ResourceGroup,
+    //load : Arc<Mutex<usize>>
+    )
 {
-    //mesh still have a mutable state variable
-    //init_mesh(mesh);
+    //object_init_mat(material, shader, resource, load);
+    //TODO do this one level up and dont pass 2 matrix, but only one
+    let mat = camera_world * object_world;
+    set_matrix(shader, &mat);
 }
 
+fn set_matrix(shader :&shader::Shader, matrix : &matrix::Matrix4)
+{
+    shader.uniform_set("matrix", matrix);
+}
 
 fn draw_mesh(shader : &shader::Shader, mesh : &mesh::Mesh)
 {
-    //mesh still have a mutable state variable
-    //init_mesh(mesh);
+    let (can_render, vertex_data_count) = init_mesh(mesh, shader);
+    object_draw_mesh(mesh, vertex_data_count);
 }
 
