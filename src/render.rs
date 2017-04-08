@@ -1032,9 +1032,7 @@ fn init_mesh(
     mb : &mut mesh::Mesh,
     shader : &shader::Shader) -> (bool, usize)
 {
-    if mb.state == 1 {
-        mb.init_buffers();
-    }
+    mb.init_buffers();
 
     let mut can_render = true;
     let mut vertex_data_count = 0;
@@ -1070,52 +1068,6 @@ fn init_mesh(
 
     (can_render, vertex_data_count)
 }
-
-fn init_mesh2(
-    rm : &mut resource::ResourceManager<mesh::Mesh>,
-    mb : &mesh::Mesh,
-    shader : &shader::Shader) -> (bool, usize)
-{
-    if mb.state == 1 {
-        //TODO
-        //mb.init_buffers();
-    }
-
-    let mut can_render = true;
-    let mut vertex_data_count = 0;
-    for (name, cgl_att) in shader.attributes.iter() {
-
-        match mb.buffer_f32_get(name.as_ref()){
-            Some(ref cb) => {
-                cb.utilise(*cgl_att);
-                if name == "position" {
-                    vertex_data_count = cb.size_get();
-                }
-                continue;
-            },
-            None => (),
-        }
-
-        match mb.buffer_u32_get(name.as_ref()){
-            Some(ref cb) => {
-                cb.utilise(*cgl_att);
-                if name == "position" {
-                    vertex_data_count = cb.size_get();
-                }
-                continue;
-            },
-            None => {
-                //println!("while sending attributes, this mesh does 
-                //not have the '{}' buffer, not rendering", name);
-                can_render = false;
-                break;
-            }
-        }
-    }
-
-    (can_render, vertex_data_count)
-}
-
 
 fn object_draw_mesh(
     mb : &mesh::Mesh,

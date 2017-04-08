@@ -266,10 +266,7 @@ impl Create for mesh::Mesh
 
     fn inittt(&mut self)
     {
-        if self.state == 0 {
-            //TODO can be read anywhere
-            self.file_read();
-        }
+        self.file_read();
     }
 }
 

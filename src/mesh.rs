@@ -227,7 +227,8 @@ pub struct Weight
 pub struct Mesh
 {
     pub name : String,
-    pub state : i32,
+    //TODO remove state from mesh, (and also remove cgl_buffer from Buffer?)
+    state : Cell<i32>,
     //buffers : HashMap<String, Box<BufferSend+Send+Sync>>, //TODO check
     buffers_f32 : HashMap<String, Box<Buffer<f32>>>, //TODO check
     buffers_u32 : HashMap<String, Box<Buffer<u32>>>, //TODO check
@@ -243,7 +244,7 @@ impl Mesh
     {
        let m = Mesh {
            name : String::from("mesh_new"),
-           state : 0,
+           state : Cell::new(0),
            buffers_f32 : HashMap::new(),
            buffers_u32 : HashMap::new(),
            draw_type : Faces,
@@ -269,7 +270,7 @@ impl Mesh
     {
        let m = Mesh {
            name : String::from(path),
-           state : 0,
+           state : Cell::new(0),
            buffers_f32 : HashMap::new(),
            buffers_u32 : HashMap::new(),
            draw_type : Faces,
@@ -283,7 +284,7 @@ impl Mesh
 
     pub fn file_read(&mut self)
     {
-        if self.state != 0 {
+        if self.state.get() != 0 {
             return;
         }
 
@@ -486,7 +487,7 @@ impl Mesh
            }
        }
 
-       self.state = 1;
+       self.state.set(1);
     }
 
     /*
@@ -498,16 +499,16 @@ impl Mesh
         }
     }
     */
-    pub fn init_buffers(&mut self)
+    pub fn init_buffers(&self)
     {
-        if self.state == 1 {
-            for (_,b) in self.buffers_u32.iter_mut() {
+        if self.state.get() == 1 {
+            for (_,b) in &self.buffers_u32 {
                 b.send();
             }
-            for (_,b) in self.buffers_f32.iter_mut() {
+            for (_,b) in &self.buffers_f32 {
                 b.send();
             }
-            self.state = 11;
+            self.state.set(11);
         }
     }
 
@@ -594,7 +595,7 @@ impl Mesh
 
         self.draw_type = Lines;
 
-        self.state = 1;
+        self.state.set(1);
     }
 
     pub fn add_aabox(&mut self, aabox : &geometry::AABox, color : vec::Vec4)
@@ -758,7 +759,13 @@ impl Mesh
             };
         }
 
-        self.state = 1;
+        self.state.set(1);
+    }
+
+    /// Set as dirty to resend the buffers
+    pub fn set_dirty(&mut self)
+    {
+        self.state.set(1);
     }
 
 }
@@ -767,18 +774,18 @@ impl resource::ResourceT for Mesh
 {
     fn init(&mut self)
     {
-        if self.state == 0 {
+        if self.state.get() == 0 {
             self.file_read();
         }
 
-        if self.state == 1 {
+        if self.state.get() == 1 {
             for (_,b) in self.buffers_f32.iter_mut() {
                 Some(b.send());
             }
             for (_,b) in self.buffers_u32.iter_mut() {
                 Some(b.send());
             }
-            self.state = 11;
+            self.state.set(11);
         }
     }
 }
@@ -797,7 +804,7 @@ impl Decodable for Mesh {
     decoder.read_struct("root", 0, |decoder| {
          Ok(Mesh{
           name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-           state : 0,
+           state : Cell::new(0),
            buffers_f32 : HashMap::new(),
            buffers_u32 : HashMap::new(),
            draw_type : Faces,
