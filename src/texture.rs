@@ -1,6 +1,5 @@
 use png;
 use libc::{c_uint, c_void};
-use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use std::mem;
 use std::path::Path;
 use std::cell::Cell;
@@ -25,7 +24,6 @@ pub struct Texture
 {
     pub name : String,
     state : Cell<i32>,
-    //state : i32,
     image : Option<png::Image>,
     pub cgl_texture: Cell<Option<*const CglTexture>>,
 } 
@@ -117,27 +115,4 @@ impl Texture
         }
     }
 }
-
-impl Encodable for Texture {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("Texture", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Texture {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Texture, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Texture{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-           state : Cell::new(0),
-           image : None,
-           cgl_texture : Cell::new(None)
-        })
-    })
-  }
-}
-
 
