@@ -32,13 +32,22 @@ pub trait ResourceT  {
     fn init(&mut self);
 }
 
+fn return_none<T>() -> Option<T>
+{
+    None
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct ResTT<T>
 {
     //TODO remove instance (only have instance_managed);
     // can we remove name?
     pub name : String,
+    #[serde(skip_serializing, skip_deserializing)]
     pub resource : Option<usize>,
+    #[serde(skip_serializing, skip_deserializing, default="return_none")]
     pub instance : Option<T>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub instance_managed : Option<usize>,
 }
 

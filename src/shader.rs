@@ -25,11 +25,15 @@ pub struct CglShaderAttribute;
 #[repr(C)]
 pub struct CglShaderUniform;
 
+#[derive(Serialize, Deserialize)]
 pub struct Shader
 {
     pub name : String,
+    #[serde(skip_serializing, skip_deserializing)]
     pub attributes : HashMap<String, *const CglShaderAttribute>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub uniforms : HashMap<String, *const CglShaderUniform>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub state : i32,
 
     pub vert_path : Option<String>,
@@ -38,6 +42,7 @@ pub struct Shader
     vert : Option<String>,
     frag : Option<String>,
 
+    #[serde(skip_serializing, skip_deserializing)]
     cgl_shader : Option<*const CglShader>, 
 }
 
@@ -287,7 +292,7 @@ impl Shader
 }
 
 
-#[derive(Clone,RustcDecodable,RustcEncodable)]
+#[derive(Clone,Serialize, Deserialize, RustcDecodable, RustcEncodable)]
 pub enum UniformData
 {
     Int(i32),

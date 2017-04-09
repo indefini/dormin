@@ -21,7 +21,7 @@ use fbo;
 //#[derive(Encodable, Default)]
 use self::Sampler::{ImageFile,Fbo};
 
-#[derive(RustcDecodable, RustcEncodable, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Serialize, Deserialize, Clone)]
 pub enum Sampler
 {
     ImageFile(resource::ResTT<texture::Texture>),
@@ -43,16 +43,13 @@ impl Sampler
     }
 }
 
-//#[derive(RustcDecodable, RustcEncodable)]
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Material
 {
     pub name : String,
     pub shader: Option<resource::ResTT<shader::Shader>>,
     pub state : i32,
-    //pub textures : HashMap<String, resource::ResTT<texture::Texture>>,
     pub textures : HashMap<String, Sampler>,
-    //pub uniforms : HashMap<String, Box<UniformSend+'static>>,
     pub uniforms : HashMap<String, Box<shader::UniformData>>,
 }
 
