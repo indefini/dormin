@@ -218,7 +218,7 @@ components_def!(
 macro_rules! compdata_def(
     ($($member:ident),+) => (
 
-#[derive(Clone, RustcEncodable, RustcDecodable)]
+#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize)]
 pub enum CompData
 {
     None,

@@ -31,8 +31,8 @@ use libc::c_void;
 
 
 //#[derive(Decodable, Encodable)]
-//#[derive(Encodable)]
 //#[derive(Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct Object
 {
     // Object Architecture
@@ -79,11 +79,15 @@ pub struct Object
     pub position : vec::Vec3,
     pub orientation : transform::Orientation,
     pub scale : vec::Vec3,
+    #[serde(skip_serializing, skip_deserializing)]
     pub children : Vec<Arc<RwLock<Object>>>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub parent : Option<Arc<RwLock<Object>>>,
 
     // Components
+    #[serde(skip_serializing, skip_deserializing)]
     pub mesh_render : Option<mesh_render::MeshRenderer>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub components : Vec<Box<Components>>,
     pub comp_data : Vec<Box<CompData>>,
     pub comp_string : Vec<String>,

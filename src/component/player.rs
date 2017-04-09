@@ -13,7 +13,7 @@ use property::{PropertyRead, PropertyGet, PropertyWrite, WriteValue};
 use std::any::Any;
 use input;
 
-#[derive(Clone, RustcEncodable, RustcDecodable,Default)]
+#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize, Default)]
 pub struct Player
 {
     pub speed : f64
@@ -102,12 +102,12 @@ impl Component for PlayerBehavior
     */
 }
 
-#[derive(Clone, RustcEncodable, RustcDecodable, Default)]
+#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize, Default)]
 pub struct Enemy {
     pub name : String
 }
 
-#[derive(Clone, RustcEncodable, RustcDecodable, Default)]
+#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize, Default)]
 pub struct Collider {
     pub name : String
 }

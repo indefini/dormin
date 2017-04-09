@@ -35,7 +35,7 @@ lazy_static = "0.1.*"
 #hlua = "0.1"
 libc = "*"
 #clippy = "*"
-uuid = { version = "0.3.1", features = ["v4", "rustc-serialize"] }
+uuid = { version = "0.4", features = ["serde", "v4", "rustc-serialize"] }
 serde = "0.9"
 serde_derive = "0.9"
 serde_json = "0.9"

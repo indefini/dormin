@@ -332,7 +332,7 @@ impl Action {
     }
 }
 
-#[derive(Clone, RustcEncodable, RustcDecodable, Default)]
+#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize, Default)]
 pub struct ArmaturePath {
    pub name : String
 }
