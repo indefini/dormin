@@ -6,6 +6,8 @@ use std::io::{Read,Write};
 use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use uuid::Uuid;
 use std::path::Path;
+use std::fmt;
+use serde;
 use toml;
 use armature;
 use input;
@@ -17,17 +19,110 @@ use resource;
 
 use transform;
 
+#[derive(Serialize, Deserialize)]
 pub struct Scene
 {
     pub name : String,
     pub id : Uuid,
+    #[serde(serialize_with="serialize_refcell", deserialize_with="deserialize_option_refcell")]
     pub camera : Option<Rc<RefCell<camera::Camera>>>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub cameras : Vec<Rc<RefCell<camera::Camera>>>,
 
+    #[serde(serialize_with="serialize_vec_arc", deserialize_with="deserialize_vec_arc")]
     pub objects : Vec<Arc<RwLock<object::Object>>>,
 
+    #[serde(skip_serializing, skip_deserializing)]
     pub transforms : Vec<transform::Transform>,
 }
+
+//TODO remove all serde manual implementations.
+fn deserialize_option_refcell<D, T>(d : D) ->
+    Result<Option<Rc<RefCell<T>>>, D::Error> where D: serde::Deserializer, T : serde::Deserialize
+{
+    if let Ok(r) = deserialize_refcell(d) {
+        Ok(Some(Rc::new(r)))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn deserialize_refcell<D, T>(d : D) -> Result<RefCell<T>, D::Error> where D: serde::Deserializer, T : serde::Deserialize
+{
+    let value = try!(T::deserialize(d));
+    Ok(RefCell::new(value))
+}
+
+
+fn serialize_refcell<S,T>(t: &Option<Rc<RefCell<T>>>, s : S) -> Result<S::Ok, S::Error> where S: serde::Serializer, T : serde::Serialize
+{
+    if let Some(ref t) = *t {
+        t.borrow().serialize(s)
+    }
+    else {
+        s.serialize_none()
+    }
+}
+
+fn deserialize_vec_arc<D, T>(d : D) -> Result<Vec<Arc<RwLock<T>>>, D::Error> where D: serde::Deserializer, T : serde::Deserialize
+{
+    use std::marker::PhantomData;
+
+    pub struct VisitorVec<T> {
+        marker: PhantomData<T>,
+    }
+
+    impl<T> VisitorVec<T>
+            where T : serde::Deserialize
+        {
+            pub fn new() -> Self {
+                VisitorVec {
+                    marker: PhantomData,
+                }
+            }
+}
+
+    impl<T> serde::de::Visitor for VisitorVec<T> where T: serde::Deserialize {
+        type Value = Vec<Arc<RwLock<T>>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a sequence")
+        }
+
+        #[inline]
+        fn visit_unit<E>(self) -> Result<Vec<Arc<RwLock<T>>>, E> where E: serde::de::Error,
+        {
+            Ok(Vec::new())
+        }
+
+        #[inline]
+        fn visit_seq<V>(self, mut v: V) -> Result<Vec<Arc<RwLock<T>>>, V::Error>
+            where V: serde::de::SeqVisitor,
+        {
+            let mut values = Vec::new();
+
+            while let Some(value) = try!(v.visit()) {
+                Vec::push(&mut values, Arc::new(RwLock::new(value)));
+            }
+
+            Ok(values)
+        }
+    }
+
+    d.deserialize_seq(VisitorVec::new())
+}
+
+use serde::ser::SerializeSeq;
+fn serialize_vec_arc<S,T>(t: &Vec<Arc<RwLock<T>>>, s : S) -> Result<S::Ok, S::Error> where S: serde::Serializer, T : serde::Serialize
+{
+    let mut seq = s.serialize_seq(Some(t.len()))?;
+    for e in t {
+        seq.serialize_element(&*e.read().unwrap())?;
+    }
+    seq.end()
+}
+
 
 pub enum CompIdent {
     String(String),
