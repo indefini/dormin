@@ -1,7 +1,6 @@
 use std::sync::{RwLock, Arc};
 use std::f64::consts;
 use std::default::Default;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use serde;
 
 use vec;
@@ -12,14 +11,14 @@ use geometry;
 use transform::Orientation;
 use uuid;
 
-#[derive(Clone,RustcDecodable,RustcEncodable, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Projection
 {
     Perspective,
     Orthographic
 }
 
-#[derive(Clone,RustcDecodable,RustcEncodable, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CameraData
 {
     fovy : f64,
@@ -74,7 +73,6 @@ impl Default for CameraData
     }
 }
 
-//#[derive(RustcDecodable,RustcEncodable)]
 pub enum ObjectKind
 {
     Own(Arc<RwLock<object::Object>>),
@@ -138,7 +136,7 @@ impl ObjectKind {
     }
 }
 
-#[derive(Clone,RustcDecodable,RustcEncodable, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Camera
 {
     pub data : CameraData,

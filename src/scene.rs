@@ -3,11 +3,11 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read,Write};
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use uuid::Uuid;
 use std::path::Path;
 use std::fmt;
 use serde;
+use serde_json;
 use toml;
 use armature;
 use input;
@@ -321,7 +321,7 @@ impl Scene
     {
         let mut file = String::new();
         File::open(&Path::new(file_path)).ok().unwrap().read_to_string(&mut file);
-        let mut scene : Scene = json::decode(file.as_ref()).unwrap();
+        let mut scene : Scene = serde_json::from_str(&file).unwrap();
 
         scene.post_read(resource);
 
@@ -431,14 +431,9 @@ impl Scene
         println!("save scene todo serialize");
         let path : &Path = self.name.as_ref();
         let mut file = File::create(path).ok().unwrap();
-        let mut s = String::new();
-        {
-            let mut encoder = json::Encoder::new_pretty(&mut s);
-            let _ = self.encode(&mut encoder);
-        }
 
-        //let result = file.write(s.as_ref().as_bytes());
-        let result = file.write(s.as_bytes());
+        let js = serde_json::to_string_pretty(self);
+        let result = file.write(js.unwrap().as_bytes());
     }
 
     pub fn object_find(&self, name : &str) -> Option<Arc<RwLock<object::Object>>>
@@ -664,40 +659,6 @@ impl Clone for Scene {
             transforms : self.transforms.clone()
         }
     }
-}
-
-
-impl Encodable for Scene {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("Scene", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          try!(encoder.emit_struct_field( "id", 1usize, |encoder| self.id.encode(encoder)));
-          try!(encoder.emit_struct_field( "objects", 2usize, |encoder| self.objects.encode(encoder)));
-          try!(encoder.emit_struct_field( "camera", 3usize, |encoder| self.camera.encode(encoder)));
-          //try!(encoder.emit_struct_field( "transforms", 4usize, |encoder| self.transforms.encode(encoder)));
-          //try!(encoder.emit_struct_field( "cameras", 5usize, |encoder| self.cameras.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Scene {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Scene, D::Error> {
-      decoder.read_struct("root", 0, |decoder| {
-         Ok(Scene{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-          id: try!(decoder.read_struct_field("id", 0, |decoder| Decodable::decode(decoder))),
-         //id : Uuid::new_v4(),
-          objects: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
-          //tests: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
-          //camera : None //try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
-          camera : try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder))),
-          cameras : Vec::new(),// try!(decoder.read_struct_field("cameras", 0, |decoder| Decodable::decode(decoder)))
-          //camera : None
-        transforms : Vec::new()
-        })
-    })
-  }
 }
 
 pub fn post_read_parent_set(o : Arc<RwLock<object::Object>>)
