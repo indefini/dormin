@@ -1,13 +1,9 @@
 use input;
-//use component;
 use std::rc::Rc;
 use std::cell::RefCell;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::sync::{RwLock, Arc};
 
 use component::{Component, CompData};
-use component::manager::Encode;
-//use object::ComponentFunc;
 use object::Object;
 use transform;
 use mesh;
@@ -18,7 +14,7 @@ use material;
 use property::{PropertyRead, PropertyGet, PropertyWrite, WriteValue};
 use std::any::Any;
 
-#[derive(RustcDecodable, RustcEncodable, Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct MeshRender
 {
     pub mesh : String,

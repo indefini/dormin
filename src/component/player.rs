@@ -1,19 +1,15 @@
-//use component;
 use std::rc::Rc;
 use std::cell::RefCell;
 use component::{Component,Components};
-use component::manager::Encode;
-//use object::ComponentFunc;
 use object::Object;
 use transform;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use resource;
 
 use property::{PropertyRead, PropertyGet, PropertyWrite, WriteValue};
 use std::any::Any;
 use input;
 
-#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Player
 {
     pub speed : f64
@@ -102,24 +98,14 @@ impl Component for PlayerBehavior
     */
 }
 
-#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Enemy {
     pub name : String
 }
 
-#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Collider {
     pub name : String
-}
-
-impl Encode for Player
-{
-  fn encode_this<E : Encoder>(&self, encoder: &mut E)// -> Result<(), &str>
-  {
-      let _ = self.encode(encoder);
-
-  }
-
 }
 
 property_set_impl!(Player,[speed]);

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::fs::File;
 use std::io::{BufReader, BufRead, Read};
 use libc::{c_char, c_uint, c_void};
@@ -360,33 +359,5 @@ extern {
         cb : ShaderUniformAddFn,
         data : *const c_void);
 
-}
-
-//impl <S: Encoder<E>, E> Encodable<S, E> for Shader {
-impl Encodable for Shader {
-  fn encode<S : Encoder>(&self, encoder: &mut S) -> Result<(), S::Error> {
-      encoder.emit_struct("Mesh", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Shader {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Shader, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Shader{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-             cgl_shader : None,
-             attributes : HashMap::new(),
-             uniforms : HashMap::new(),
-             vert : None,
-             frag : None,
-             vert_path : None,
-             frag_path : None,
-             state : 0
-        })
-    })
-  }
 }
 

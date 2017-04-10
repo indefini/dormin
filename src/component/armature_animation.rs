@@ -1,13 +1,9 @@
-//use component;
 use std::rc::Rc;
 use std::cell::RefCell;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::sync::{RwLock, Arc};
 
 
 use component::{Component, Components, CompData};
-use component::manager::Encode;
-//use object::ComponentFunc;
 use object::Object;
 use transform;
 use armature;
