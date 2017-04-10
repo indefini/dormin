@@ -35,7 +35,6 @@ extern crate lazy_static;
 #[macro_use]
 extern crate lua;
 
-//use serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::collections::HashMap;
 use std::sync::{RwLock, Arc};
 //use std::rc::Rc;

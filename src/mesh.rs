@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied,Vacant};
 use std::fs::File;
-use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
 use std::io::Read;
@@ -788,32 +787,6 @@ impl resource::ResourceT for Mesh
             self.state.set(11);
         }
     }
-}
-
-impl Encodable for Mesh {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("Mesh", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Mesh {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Mesh, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Mesh{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-           state : Cell::new(0),
-           buffers_f32 : HashMap::new(),
-           buffers_u32 : HashMap::new(),
-           draw_type : Faces,
-           aabox : None,
-           buffers_f32_base : HashMap::new(),
-           weights : Vec::new()
-        })
-    })
-  }
 }
 
 pub fn read_string(file: &mut File ) -> String

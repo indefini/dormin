@@ -9,7 +9,7 @@ use std::cell::Cell;
 use vec;
 use matrix;
 
-#[derive(RustcDecodable, RustcEncodable, Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum Orientation
 {
     AngleXYZ(vec::Vec3),
