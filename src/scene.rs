@@ -602,22 +602,6 @@ impl Scene
         */
     }
 
-    pub fn savetoml(&self)
-    {
-        //TODO
-        //let s = toml::encode_str(self);
-        //let s = toml::ser::to_string(self);
-        println!("encoder toml : {} ", "TODO" );
-    }
-
-    /*
-    pub fn new_toml(s : &str) -> Material
-    {
-        let mat : Material = toml::decode_str(s).unwrap();
-        mat
-    }
-    */
-
     pub fn update(
         &mut self,
         dt : f64,

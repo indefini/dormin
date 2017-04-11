@@ -9,7 +9,6 @@ use object;
 use vec;
 use transform;
 
-use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use std::collections::HashMap;
 use std::collections::hash_map::Values;
 use std::slice::{Iter,IterMut};
@@ -755,39 +754,6 @@ impl<T:'static+Clone+Create+Sync+Send> ResourceManager<T> {
         t
     }
 
-}
-
-//#[deriving(Decodable, Encodable)]
-/*
-pub struct ResourceRef
-{
-    pub name : String,
-    pub resource : Resource
-}
-*/
-
-impl <T> Encodable for ResTT<T> {
-    fn encode<S: Encoder>(&self, encoder: &mut S) -> Result<(), S::Error> {
-        encoder.emit_struct("NotImportantName", 1, |encoder| {
-            try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-            Ok(())
-        })
-    }
-}
-
-impl<T> Decodable for ResTT<T> {
-    fn decode<D : Decoder>(decoder: &mut D) -> Result<ResTT<T>, D::Error> {
-        decoder.read_struct("root", 0, |decoder| {
-            Ok(
-                ResTT{
-                    name : try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-                    resource : None,
-                    instance : None,
-                    instance_managed : None
-                }
-              )
-        })
-    }
 }
 
 pub fn resource_get<'a, T:'static+Create+Send+Sync>(

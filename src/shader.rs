@@ -291,7 +291,7 @@ impl Shader
 }
 
 
-#[derive(Clone,Serialize, Deserialize, RustcDecodable, RustcEncodable)]
+#[derive(Clone,Serialize, Deserialize)]
 pub enum UniformData
 {
     Int(i32),

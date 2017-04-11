@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::collections::hash_map::Entry::{Occupied,Vacant};
@@ -20,7 +19,7 @@ use texture;
 use fbo;
 use self::Sampler::{ImageFile,Fbo};
 
-#[derive(RustcDecodable, RustcEncodable, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum Sampler
 {
     ImageFile(resource::ResTT<texture::Texture>),
@@ -152,35 +151,6 @@ impl Material
         let result = file.write(s.as_bytes());
     }
 
-    /*
-    pub fn savetoml(&self)
-    {
-        let s = toml::encode_str(self);
-        println!("encoder toml : {} ", s );
-    }
-
-    pub fn new_toml(s : &str) -> Material
-    {
-        let mat : Material = toml::decode_str(s).unwrap();
-        mat
-    }
-    */
-
-
-
-    /*
-    pub fn new(name : &str, shader : &str) -> Material
-    {
-        Material {
-            name : String::from(name),
-            shader : resource::ResTT::new(shader),
-            state : 0,
-            texture : None
-        }
-
-    }
-    */
-
     pub fn set_uniform_data(&mut self, name : &str, data : shader::UniformData)
     {
         let key = name.to_string();
@@ -216,33 +186,5 @@ impl resource::ResourceT for Material
 
     }
 
-}
-
-impl Encodable for Material {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("Material", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          try!(encoder.emit_struct_field( "shader", 1usize, |encoder| self.shader.encode(encoder)));
-          try!(encoder.emit_struct_field( "textures", 2usize, |encoder| self.textures.encode(encoder)));
-          try!(encoder.emit_struct_field( "uniforms", 3usize, |encoder| self.uniforms.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Material {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Material, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Material{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-          shader: try!(decoder.read_struct_field("shader", 0, |decoder| Decodable::decode(decoder))),
-          state : 0,
-          //texture: try!(decoder.read_struct_field("texture", 0, |decoder| Decodable::decode(decoder))),
-          textures: try!(decoder.read_struct_field("textures", 0, |decoder| Decodable::decode(decoder))),
-          uniforms: try!(decoder.read_struct_field("uniforms", 0, |decoder| Decodable::decode(decoder))),
-          //uniforms: HashMap::new()
-        })
-    })
-  }
 }
 

@@ -4,7 +4,6 @@ use std::fs::File;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
 use std::io::Read;
-use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 
 //use libc::{c_char, c_int, c_uint, c_void};
 use libc::{c_uint, c_void};
@@ -332,7 +331,7 @@ impl Action {
     }
 }
 
-#[derive(Clone, RustcEncodable, RustcDecodable, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct ArmaturePath {
    pub name : String
 }
@@ -469,35 +468,6 @@ impl Armature {
 
 
 }
-
-/*
-impl Encodable for Armature {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      println!("______ encode _________ name ::: {}", self.name);
-      encoder.emit_struct("armature", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Armature {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Armature, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Armature{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-          position : vec::Vec3::zero(),
-          rotation : vec::Quat::identity(),
-          scale : vec::Vec3::zero(),
-          actions : Vec::new(),
-          bones : Vec::new(),
-          state : 0usize
-        })
-    })
-  }
-}
-*/
-
 
 #[derive(Clone)]
 pub struct ArmatureInstance
