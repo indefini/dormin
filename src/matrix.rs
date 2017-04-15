@@ -2,7 +2,9 @@ use vec;
 //use std::num::Float;
 use std::fmt;
 use std::ops::{Mul};
+use std::default::Default;
 
+#[derive(Copy, Clone)]
 pub struct Matrix4
 {
     data : [f64; 16]
@@ -328,7 +330,14 @@ impl Matrix4
             self.data[15]]
         }
     }
+}
 
+impl Default for Matrix4
+{
+    fn default() -> Matrix4
+    {
+        Matrix4::identity()
+    }
 }
 
 //impl<'a> Mul<&'a Matrix4, Matrix4> for &'a Matrix4 {

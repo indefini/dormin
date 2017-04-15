@@ -1,6 +1,5 @@
 use png;
 use libc::{c_uint, c_void};
-use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use std::mem;
 use std::path::Path;
 use std::cell::Cell;
@@ -24,10 +23,9 @@ extern {
 pub struct Texture
 {
     pub name : String,
-    pub state : i32,
-    //state : i32,
+    state : Cell<i32>,
     image : Option<png::Image>,
-    pub cgl_texture: Option<*const CglTexture>,
+    pub cgl_texture: Cell<Option<*const CglTexture>>,
 } 
 
 unsafe impl Send for Texture {}
@@ -39,9 +37,9 @@ impl Texture
     {
         let t = Texture{
             name: String::from(name),
-            state : 0,
+            state : Cell::new(0),
             image : None,
-            cgl_texture : None
+            cgl_texture : Cell::new(None)
         };
 
         t
@@ -49,7 +47,7 @@ impl Texture
 
     pub fn load(&mut self)
     {
-        if self.state != 0 {
+        if self.state.get() != 0 {
             return
         }
 
@@ -63,14 +61,14 @@ impl Texture
             },
             Ok(img) => {
                 self.image = Some(img);
-                self.state = 1;
+                self.state.set(1);
             }
         };
     }
 
-    pub fn init(&mut self)
+    pub fn init(&self)
     {
-        if self.state != 1 {
+        if self.state.get() != 1 {
             return
         }
 
@@ -102,34 +100,19 @@ impl Texture
                         img.height as c_uint
                         );
 
-                    self.cgl_texture = Some(cgltex);
+                    self.cgl_texture.set(Some(cgltex));
                 }
-                self.state = 2;
+                self.state.set(2);
             }
+        }
+
+    }
+
+    pub fn release(&mut self)
+    {
+        if self.state.get() == 2 {
+            self.image = None;
         }
     }
 }
-
-impl Encodable for Texture {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("Texture", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Texture {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Texture, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Texture{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-           state : 0,
-           image : None,
-           cgl_texture : None
-        })
-    })
-  }
-}
-
 

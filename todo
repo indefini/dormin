@@ -1,3 +1,5 @@
+extract state and cgl_* in mesh, texture etc... and put them in resource manager.
+
 TODO scene and camera clone are wrong : object id
 
 remove arc/rwlock especially in restest/resdata

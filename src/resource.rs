@@ -9,7 +9,6 @@ use object;
 use vec;
 use transform;
 
-use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use std::collections::HashMap;
 use std::collections::hash_map::Values;
 use std::slice::{Iter,IterMut};
@@ -32,11 +31,23 @@ pub trait ResourceT  {
     fn init(&mut self);
 }
 
+fn return_none<T>() -> Option<T>
+{
+    None
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct ResTT<T>
 {
+    //TODO remove instance (only have instance_managed);
+    // can we remove name?
     pub name : String,
+    #[serde(skip_serializing, skip_deserializing)]
     pub resource : Option<usize>,
+    #[serde(skip_serializing, skip_deserializing, default="return_none")]
     pub instance : Option<T>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub instance_managed : Option<usize>,
 }
 
 impl<T:Create+Send+Sync+'static> ResTT<T>
@@ -46,7 +57,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         ResTT {
             name : String::from(name),
             resource : None,
-            instance : None
+            instance : None,
+            instance_managed : None
         }
     }
 
@@ -64,7 +76,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         ResTT {
             name : String::from(name),
             resource : None,
-            instance : Some(r)
+            instance : Some(r),
+            instance_managed : None
         }
     }
 
@@ -73,7 +86,8 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         ResTT {
             name : String::from(name),
             resource : Some(res),
-            instance : None
+            instance : None,
+            instance_managed : None
         }
     }
 
@@ -159,16 +173,34 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         self.instance.as_mut()
     }
 
+    pub fn get_or_create_instance(&mut self) -> &mut T
+    {
+        if self.instance.is_none() {
+            let mut mt : T = Create::create(self.name.as_ref());
+            mt.inittt();
+            self.instance = Some(mt);
+        }
+
+        self.instance.as_mut().unwrap()
+    }
+
+    pub fn is_instance(&self) -> bool
+    {
+        self.instance.is_some() || self.instance_managed.is_some()
+    }
+
 }
 
 impl<T> Clone for ResTT<T>
 {
     fn clone(&self) -> ResTT<T>
     {
+        println!("WARNING : clone for resource is TODO, because of instance");
         ResTT {
             name : self.name.clone(),
             resource : self.resource.clone(),
-            instance : None //TODO
+            instance : None, //TODO
+            instance_managed : None //TODO
         }
     }
 }
@@ -242,10 +274,7 @@ impl Create for mesh::Mesh
 
     fn inittt(&mut self)
     {
-        if self.state == 0 {
-            //TODO can be read anywhere
-            self.file_read();
-        }
+        self.file_read();
     }
 }
 
@@ -368,13 +397,6 @@ impl Create for camera::Camera
     }
 }
 
-#[derive(Clone,Copy)]
-pub enum StateOld
-{
-    Loading(usize),
-    Using(usize),
-}
-
 pub enum State<T>
 {
     Loading(Option<thread::JoinHandle<()>>,Arc<RwLock<Option<T>>>),
@@ -442,10 +464,12 @@ impl<T> State<T>
 
 pub struct ResourceManager<T>
 {
+    //usize is the index in loaded vec of the resource
     map : HashMap<String, usize>,
     loaded : Vec<State<T>>,
+    state : Vec<usize>
 
-    // Other possible way
+    // Other possible ways
     //map : HashMap<String, usize>, => saves index to ids, and id never change
     //ids : Vec<State>,
     
@@ -470,6 +494,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         ResourceManager {
             map : HashMap::new(),
             loaded : Vec::new(),
+            state : Vec::new()
         }
     }
 
@@ -729,38 +754,6 @@ impl<T:'static+Clone+Create+Sync+Send> ResourceManager<T> {
         t
     }
 
-}
-
-//#[deriving(Decodable, Encodable)]
-/*
-pub struct ResourceRef
-{
-    pub name : String,
-    pub resource : Resource
-}
-*/
-
-impl <T> Encodable for ResTT<T> {
-    fn encode<S: Encoder>(&self, encoder: &mut S) -> Result<(), S::Error> {
-        encoder.emit_struct("NotImportantName", 1, |encoder| {
-            try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-            Ok(())
-        })
-    }
-}
-
-impl<T> Decodable for ResTT<T> {
-    fn decode<D : Decoder>(decoder: &mut D) -> Result<ResTT<T>, D::Error> {
-        decoder.read_struct("root", 0, |decoder| {
-            Ok(
-                ResTT{
-                    name : try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-                    resource : None,
-                    instance : None
-                }
-              )
-        })
-    }
 }
 
 pub fn resource_get<'a, T:'static+Create+Send+Sync>(

@@ -16,31 +16,6 @@ use std::cell::RefCell;
 //log_syntax!()
 //trace_macros!(true)
 
-/* //For testing
-#[derive(Decodable, Encodable, Clone)]
-pub struct Chris
-{
-    pub x : f64,
-    pub y : f64,
-    pub z : f64,
-    pub position : vec::Vec3,
-    pub boxpos : Box<vec::Vec3>
-}
-
-impl Chris
-{
-    pub fn new()-> Chris
-    {
-        Chris {
-            x : 0f64,
-            y : 0f64,
-            z : 0f64,
-            position : vec::Vec3::new(6f64,7f64,8f64),
-            boxpos : box vec::Vec3::new(6f64,7f64,8f64)}
-    }
-}
-*/
-
 pub trait PropertyRead
 {
   fn get_property(&self) -> Option<Box<Any>>;

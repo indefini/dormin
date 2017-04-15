@@ -12,7 +12,6 @@ use transform;
 use mesh;
 use resource;
 
-//#[derive(RustcDecodable, RustcEncodable)]
 pub struct Factory
 {
      id : u32,

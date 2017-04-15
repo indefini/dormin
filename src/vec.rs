@@ -3,7 +3,7 @@ use std::f64::consts;
 use std::ops::{Mul, BitXor, Add, Sub, Div};
 use std::f64::EPSILON;
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
 pub struct Vec3
 {
     pub x : f64,
@@ -11,14 +11,14 @@ pub struct Vec3
     pub z : f64
 }
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
 pub struct Vec2
 {
     pub x : f64,
     pub y : f64,
 }
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
 pub struct Vec4
 {
     pub x : f64,
@@ -27,7 +27,7 @@ pub struct Vec4
     pub w : f64
 }
 
-#[derive(RustcDecodable, RustcEncodable, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct Quat
 {
     pub x : f64,

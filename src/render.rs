@@ -67,7 +67,16 @@ pub extern fn resize_cb(r : *mut Render, w : c_int, h : c_int) -> () {
 struct CameraPass
 {
     camera : Rc<RefCell<camera::Camera>>,
+    //TODO remove objects from here
+    // we need : transform = worldmatrix, mesh_render = mesh + material, 
+    // mesh and material can be instances...
     objects : Vec<Arc<RwLock<object::Object>>>,
+
+    /*
+    transform : Vec<usize>,
+    mesh : Vec<ResTT<mesh::Mesh>>,
+    material : Vec<ResTT<material::Material>>,
+    */
 }
 
 impl CameraPass
@@ -91,6 +100,7 @@ struct RenderPass
     pub name : String,
     //pub shader : Arc<RwLock<shader::Shader>>,
     pub shader : ResTT<shader::Shader>,
+    //uuid is the camera id
     pub passes : HashMap<uuid::Uuid, Box<CameraPass>>,
 }
 
@@ -188,11 +198,6 @@ impl RenderPass
 
         let init_material = |mr : &mut mesh_render::MeshRenderer| -> usize
         {
-            if let Some(m) = mr.get_mat_instance() { 
-                return object_init_mat(m, shader, resource, load);
-            }
-
-            //let m = &mut mr.material.write().unwrap();
             let material_manager = &mut *resource.material_manager.borrow_mut();
             let m = mr.material.get(material_manager).unwrap();
 
@@ -201,20 +206,15 @@ impl RenderPass
 
         not_loaded = init_material(ob.mesh_render.as_mut().unwrap());
 
-        let init_mesh = |mr : &mut mesh_render::MeshRenderer|  -> (bool, usize)
+        let init_mesh_render = |mr : &mut mesh_render::MeshRenderer|  -> (bool, usize)
         {
-            if let Some(m) = mr.get_mesh_instance() { 
-                return object_init_mesh(m, shader);
-            }
-
-            //let m = &mut mr.mesh.write().unwrap();
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
 
             let m = mr.mesh.get(mesh_manager).unwrap();
-            object_init_mesh(m, shader)
+            init_mesh(m, shader)
         };
 
-        let (can_render, vertex_data_count) = init_mesh(ob.mesh_render.as_mut().unwrap());
+        let (can_render, vertex_data_count) = init_mesh_render(ob.mesh_render.as_mut().unwrap());
 
         if can_render {
 
@@ -224,11 +224,6 @@ impl RenderPass
 
             let draw_mesh = |mr : &mut mesh_render::MeshRenderer|
             {
-                if let Some(m) = mr.get_mesh_instance() { 
-                    return object_draw_mesh(m, vertex_data_count);
-                }
-
-                //let m = &mut mr.mesh.write().unwrap();
                 let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
                 let m = mr.mesh.get(mesh_manager).unwrap();
                 object_draw_mesh(m, vertex_data_count);
@@ -992,25 +987,6 @@ fn object_init_mat(
     ) -> usize
 {
     let mut not_loaded = 0;
-    /*
-    for (_,t) in material.textures.iter_mut() {
-        match *t {
-            material::Sampler::ImageFile(ref mut img) => {
-                let yep = resource::resource_get(&mut *resource.texture_manager.borrow_mut(), img);
-                match yep.clone() {
-                    None => {},
-                    Some(yy) => {
-                        let mut yoyo = yy.write().unwrap();
-                        if yoyo.state == 1 {
-                            yoyo.init();
-                        }
-                    }
-                }
-            },
-            _ => {} //fbo so nothing to do
-        }
-    }
-    */
 
     let mut i = 0u32;
     for (name,t) in material.textures.iter_mut() {
@@ -1020,9 +996,8 @@ fn object_init_mat(
                 let r = resource::resource_get(texture_manager, img, load.clone());
                 match r {
                     Some(tex) => {
-                        if tex.state == 1 {
-                            tex.init();
-                        }
+                        tex.init();
+                        tex.release();
                         shader.texture_set(name.as_ref(), & *tex, i);
                         i = i +1;
                     },
@@ -1052,13 +1027,11 @@ fn object_init_mat(
     not_loaded
 }
 
-fn object_init_mesh(
-    mb : &mut mesh::Mesh,
+fn init_mesh(
+    mb : &mesh::Mesh,
     shader : &shader::Shader) -> (bool, usize)
 {
-    if mb.state == 1 {
-        mb.init_buffers();
-    }
+    mb.init_buffers();
 
     let mut can_render = true;
     let mut vertex_data_count = 0;
@@ -1127,5 +1100,226 @@ fn object_draw_mesh(
             }
         }
     }
+}
+
+use camera2;
+struct RenderGroup<'a>
+{
+    camera : (&'a transform::Transform, &'a camera2::Camera),
+    renderables : &'a Iterator<Item=(&'a transform::Transform, component::mesh_render::MeshRenderer)>,
+}
+
+struct RenderByShader
+{
+    pub name : String,
+    pub shader : ResTT<shader::Shader>,
+    //TODO uncomment
+    //pub passes : Iterator<Item=RenderGroup<'a>>
+}
+
+pub struct NewRender
+{
+    //String is the name you want to give to the pass, for example the shader name
+    passes : HashMap<String, Box<RenderByShader>>,
+    resource: Rc<resource::ResourceGroup>,
+}
+
+pub struct CameraInfo<'a>
+{
+    // I need each camera data
+    cameras : &'a [camera2::Camera],
+    //and world matrix.... how to get the world matrix/transform
+    transform : &'a [transform::Transform],
+    //camera_owners : &'a Vec<usize>,
+    //transform_owners : &'a Vec<usize>,
+}
+
+use component;
+impl NewRender
+{
+    pub fn new(resource : Rc<resource::ResourceGroup>
+               ) -> NewRender
+    {
+        let r = NewRender { 
+            passes : HashMap::new(),
+            resource : resource,
+            //cameras : Vec::new() //camera2::Camera::default(),
+        };
+
+        r
+    }
+
+    pub fn init(&mut self)
+    {
+    }
+
+    pub fn resize(&mut self, w : c_int, h : c_int)
+    {
+        //self.camera.set_resolution(w, h);
+
+        //let mut cam_ortho = self.camera_ortho.borrow_mut();
+        //cam_ortho.set_resolution(w, h);
+    }
+
+    /*
+    fn prepare_passes_objects_per(
+        &mut self,
+        obs : &[Arc<RwLock<object::Object>>])
+    {
+        for (_,p) in self.passes.iter_mut()
+        {
+            p.passes.clear();
+        }
+
+        for o in obs.iter() {
+            prepare_passes_object(
+                o.clone(),
+                &mut self.passes,
+                &mut self.resource.material_manager.borrow_mut(),
+                &mut self.resource.shader_manager.borrow_mut(),
+                self.camera.clone());
+        }
+    }
+    */
+
+    pub fn draw(
+        &mut self,
+        //mesh : &[component::mesh_render::MeshRenderer],
+        //transform : &Iterator<Item=&transform::Transform>,
+        renderables : &Iterator<Item=(&transform::Transform, component::mesh_render::MeshRenderer)>,
+        loading : Arc<Mutex<usize>>
+        ) -> bool
+    {
+        /*
+        self.prepare_passes_objects_per(objects);
+
+        let mut not_yet_loaded = 0;
+        for p in self.passes.values()
+        {
+            let r = p.draw_frame(&self.resource, loading.clone());
+            not_yet_loaded += r;
+        }
+
+        not_yet_loaded > 0
+        */
+        false
+    }
+
+    pub fn draw_frame(
+        )
+    {
+
+    }
+
+    /*
+    pub fn draw(
+        &self,
+        shader : &shader::Shader,
+        textures, uniforms, // Material_instance, shader_input...
+        mesh,
+        matrix)
+    {
+    }
+    */
+
+    fn test<'a>(&self, v : &'a Vec<transform::Transform>) -> Vec<&'a transform::Transform>
+    {
+        struct Dance<'a> {
+            //it : &'a Iterator<Item=(usize,&'a transform::Transform)>
+            it : &'a Iterator<Item=&'a transform::Transform>
+        }
+        //let t : &Iterator<Item=(usize,&transform::Transform)> = &v.iter().enumerate().filter(|&(x,y)| x == 0) as &Iterator<Item=(usize,&transform::Transform)>;
+        let t : &Iterator<Item=&transform::Transform> = &v.iter().enumerate().filter_map(|(x,y)| if x == 0 { Some(y)} else { None});// as &Iterator<Item=(usize,&transform::Transform)>;
+
+        let d = Dance {
+            it : t
+        };
+
+        let vref : Vec<&transform::Transform> = v.iter().enumerate().filter_map(|(x,y)| if x == 0 { Some(y)} else { None}).collect();
+        vref
+    }
+
+}
+
+pub struct TransformGraph<'a>
+{
+    parents : Vec<Option<usize>>,
+    dirty : Vec<bool>,
+    transforms : &'a mut Vec<transform::Transform>,
+    matrix : Vec<matrix::Matrix4>,
+}
+
+/*
+impl<'a> TransformGraph
+{
+    fn new(t : &Transforms) -> TransformGraph
+    {
+        let s = t.len();
+        TransformGraph {
+            parents : vec![None,s],
+            dirty : vec![false,s],
+            transforms : t,
+            matrix : t.iter().map().
+
+        }
+    }
+}
+*/
+
+//T is used to identify your object, is the id of your object/entity,
+pub fn get_transforms_of_objects_in_camera_frustum<'a, T:Copy>(
+    cam : &camera2::Camera,
+    cam_mat : &matrix::Matrix4, 
+    world_matrices : &[(&'a T, &'a matrix::Matrix4)]
+    //) -> Vec<&'a T> //usize or entity
+    ) -> Vec<T> //usize or entity
+{
+    //TODO
+    //world_matrices.iter().map(|x| *x).collect()
+    world_matrices.iter().map(|x| *x.0).collect()
+}
+
+fn test(w : &mut TransformGraph)
+{
+    let t : &mut transform::Transform = &mut w.transforms[0];
+    t.position.x = 5f64;
+}
+
+struct ShaderInput
+{
+    pub textures : HashMap<String, material::Sampler>,
+    //pub uniforms : HashMap<String, Box<UniformSend+'static>>,
+    pub uniforms : HashMap<String, Box<shader::UniformData>>,
+}
+
+struct RenderData<'a> {
+    mat : &'a matrix::Matrix4,
+    input : &'a ShaderInput,
+}
+
+fn draw(
+    camera_world : &matrix::Matrix4,
+    object_world : &matrix::Matrix4,
+    shader : &shader::Shader,
+    material : &material::Material,
+    resource : &resource::ResourceGroup,
+    //load : Arc<Mutex<usize>>
+    )
+{
+    //object_init_mat(material, shader, resource, load);
+    //TODO do this one level up and dont pass 2 matrix, but only one
+    let mat = camera_world * object_world;
+    set_matrix(shader, &mat);
+}
+
+fn set_matrix(shader :&shader::Shader, matrix : &matrix::Matrix4)
+{
+    shader.uniform_set("matrix", matrix);
+}
+
+fn draw_mesh(shader : &shader::Shader, mesh : &mesh::Mesh)
+{
+    let (can_render, vertex_data_count) = init_mesh(mesh, shader);
+    object_draw_mesh(mesh, vertex_data_count);
 }
 

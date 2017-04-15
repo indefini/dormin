@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::fs::File;
 use std::io::{BufReader, BufRead, Read};
 use libc::{c_char, c_uint, c_void};
@@ -25,11 +24,15 @@ pub struct CglShaderAttribute;
 #[repr(C)]
 pub struct CglShaderUniform;
 
+#[derive(Serialize, Deserialize)]
 pub struct Shader
 {
     pub name : String,
+    #[serde(skip_serializing, skip_deserializing)]
     pub attributes : HashMap<String, *const CglShaderAttribute>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub uniforms : HashMap<String, *const CglShaderUniform>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub state : i32,
 
     pub vert_path : Option<String>,
@@ -38,6 +41,7 @@ pub struct Shader
     vert : Option<String>,
     frag : Option<String>,
 
+    #[serde(skip_serializing, skip_deserializing)]
     cgl_shader : Option<*const CglShader>, 
 }
 
@@ -287,7 +291,7 @@ impl Shader
 }
 
 
-#[derive(Clone,RustcDecodable,RustcEncodable)]
+#[derive(Clone,Serialize, Deserialize)]
 pub enum UniformData
 {
     Int(i32),
@@ -355,33 +359,5 @@ extern {
         cb : ShaderUniformAddFn,
         data : *const c_void);
 
-}
-
-//impl <S: Encoder<E>, E> Encodable<S, E> for Shader {
-impl Encodable for Shader {
-  fn encode<S : Encoder>(&self, encoder: &mut S) -> Result<(), S::Error> {
-      encoder.emit_struct("Mesh", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Shader {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Shader, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Shader{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-             cgl_shader : None,
-             attributes : HashMap::new(),
-             uniforms : HashMap::new(),
-             vert : None,
-             frag : None,
-             vert_path : None,
-             frag_path : None,
-             state : 0
-        })
-    })
-  }
 }
 

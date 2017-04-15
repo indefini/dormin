@@ -1,7 +1,7 @@
 use std::sync::{RwLock, Arc};
 use std::f64::consts;
 use std::default::Default;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
+use serde;
 
 use vec;
 use vec::{Vec3};
@@ -11,14 +11,14 @@ use geometry;
 use transform::Orientation;
 use uuid;
 
-#[derive(Clone,RustcDecodable,RustcEncodable)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Projection
 {
     Perspective,
     Orthographic
 }
 
-#[derive(Clone,RustcDecodable,RustcEncodable)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CameraData
 {
     fovy : f64,
@@ -73,7 +73,6 @@ impl Default for CameraData
     }
 }
 
-//#[derive(RustcDecodable,RustcEncodable)]
 pub enum ObjectKind
 {
     Own(Arc<RwLock<object::Object>>),
@@ -137,23 +136,28 @@ impl ObjectKind {
     }
 }
 
-#[derive(Clone,RustcDecodable,RustcEncodable)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Camera
 {
     pub data : CameraData,
     //pub position : vec::Vec3,
     //pub orientation : Orientation,
+    #[serde(serialize_with="serialize_arc", deserialize_with="deserialize_arc")]
     pub object : Arc<RwLock<object::Object>>,
     //pub object : ObjectKind, 
     pub id : uuid::Uuid,
     pub object_id : Option<uuid::Uuid>
 }
 
-pub struct CameraRom
+fn deserialize_arc<D, T>(d : D) -> Result<Arc<RwLock<T>>, D::Error> where D: serde::Deserializer, T : serde::Deserialize
 {
-    pub data : CameraData,
-    pub id : uuid::Uuid,
-    pub object_id : Option<uuid::Uuid>
+    let value = try!(T::deserialize(d));
+    Ok(Arc::new(RwLock::new(value)))
+}
+
+fn serialize_arc<S,T>(t: &Arc<RwLock<T>>, s : S) -> Result<S::Ok, S::Error> where S: serde::Serializer, T : serde::Serialize
+{
+    t.read().unwrap().serialize(s)
 }
 
 impl Camera

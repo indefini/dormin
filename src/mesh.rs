@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied,Vacant};
 use std::fs::File;
-use rustc_serialize::{Encodable, Encoder, Decoder, Decodable};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
 use std::io::Read;
+use std::cell::Cell;
 
 //use libc::{c_char, c_int, c_uint, c_void};
 use libc::{c_uint, c_void};
@@ -64,7 +64,7 @@ pub struct Buffer<T>
 {
     pub name: String,
     pub data : Vec<T>,
-    cgl_buffer: Option<*const CglBuffer>,
+    cgl_buffer: Cell<Option<*const CglBuffer>>,
     buffer_type : BufferType,
     //state : BufferState
 }
@@ -76,7 +76,7 @@ impl<T:Clone> Clone for Buffer<T>
         Buffer {
             name : self.name.clone(),
             data : self.data.clone(),
-            cgl_buffer : self.cgl_buffer,
+            cgl_buffer : self.cgl_buffer.clone(),
             buffer_type : self.buffer_type
         }
     }
@@ -95,7 +95,7 @@ impl<T:Clone> Buffer<T>
         Buffer {
             name : name,
             data : data,
-            cgl_buffer : None,
+            cgl_buffer : Cell::new(None),
             buffer_type : buffer_type,
             //state : BufferState::Created
         }
@@ -106,7 +106,7 @@ impl<T:Clone> Buffer<T>
         Buffer {
             name : self.name.clone(),
             data : self.data.clone(),
-            cgl_buffer : None,
+            cgl_buffer : Cell::new(None),
             buffer_type : self.buffer_type
         }
     }
@@ -114,7 +114,7 @@ impl<T:Clone> Buffer<T>
 
 pub trait BufferSend
 {
-    fn send(&mut self) -> ();
+    fn send(&self) -> ();
     fn utilise(&self, att : *const shader::CglShaderAttribute) ->();
     fn size_get(&self) -> usize;
     fn cgl_buffer_get(&self) -> Option<*const CglBuffer>;
@@ -127,9 +127,9 @@ impl<T: BufferSend + Clone> BufferSendTest for T {}
 */
 
 impl<T> BufferSend for Buffer<T> {
-    fn send(&mut self) -> ()
+    fn send(&self) -> ()
     {
-        match self.cgl_buffer {
+        match self.cgl_buffer.get() {
             Some(b) => unsafe {
                 cgl_buffer_update(
                     b,
@@ -145,19 +145,19 @@ impl<T> BufferSend for Buffer<T> {
                 let cgl_buffer = cgl_buffer_init(
                     mem::transmute(self.data.as_ptr()),
                     self.data.len() as c_uint);
-                self.cgl_buffer = Some(cgl_buffer);
+                self.cgl_buffer.set(Some(cgl_buffer));
             },
             BufferType::Index => unsafe {
                 let cgl_buffer = cgl_buffer_index_init(
                     mem::transmute(self.data.as_ptr()),
                     self.data.len() as c_uint);
-                self.cgl_buffer = Some(cgl_buffer);
+                self.cgl_buffer.set(Some(cgl_buffer));
             },
             _ => unsafe {
                 let cgl_buffer = cgl_buffer_init(
                     mem::transmute(self.data.as_ptr()),
                     self.data.len() as c_uint);
-                self.cgl_buffer = Some(cgl_buffer);
+                self.cgl_buffer.set(Some(cgl_buffer));
             }
         }
     }
@@ -181,7 +181,7 @@ impl<T> BufferSend for Buffer<T> {
 
     fn utilise(&self, att : *const shader::CglShaderAttribute) ->()
     {
-        match self.cgl_buffer {
+        match self.cgl_buffer.get() {
             Some(b) => unsafe {
                 cgl_shader_attribute_send(att, b);
             },
@@ -196,7 +196,7 @@ impl<T> BufferSend for Buffer<T> {
 
     fn cgl_buffer_get(&self) -> Option<*const CglBuffer>
     {
-        return self.cgl_buffer;
+        return self.cgl_buffer.get();
     }
 }
 
@@ -226,7 +226,8 @@ pub struct Weight
 pub struct Mesh
 {
     pub name : String,
-    pub state : i32,
+    //TODO remove state from mesh, (and also remove cgl_buffer from Buffer?)
+    state : Cell<i32>,
     //buffers : HashMap<String, Box<BufferSend+Send+Sync>>, //TODO check
     buffers_f32 : HashMap<String, Box<Buffer<f32>>>, //TODO check
     buffers_u32 : HashMap<String, Box<Buffer<u32>>>, //TODO check
@@ -242,7 +243,7 @@ impl Mesh
     {
        let m = Mesh {
            name : String::from("mesh_new"),
-           state : 0,
+           state : Cell::new(0),
            buffers_f32 : HashMap::new(),
            buffers_u32 : HashMap::new(),
            draw_type : Faces,
@@ -268,7 +269,7 @@ impl Mesh
     {
        let m = Mesh {
            name : String::from(path),
-           state : 0,
+           state : Cell::new(0),
            buffers_f32 : HashMap::new(),
            buffers_u32 : HashMap::new(),
            draw_type : Faces,
@@ -282,7 +283,7 @@ impl Mesh
 
     pub fn file_read(&mut self)
     {
-        if self.state != 0 {
+        if self.state.get() != 0 {
             return;
         }
 
@@ -485,7 +486,7 @@ impl Mesh
            }
        }
 
-       self.state = 1;
+       self.state.set(1);
     }
 
     /*
@@ -497,16 +498,16 @@ impl Mesh
         }
     }
     */
-    pub fn init_buffers(&mut self)
+    pub fn init_buffers(&self)
     {
-        if self.state == 1 {
-            for (_,b) in self.buffers_u32.iter_mut() {
+        if self.state.get() == 1 {
+            for (_,b) in &self.buffers_u32 {
                 b.send();
             }
-            for (_,b) in self.buffers_f32.iter_mut() {
+            for (_,b) in &self.buffers_f32 {
                 b.send();
             }
-            self.state = 11;
+            self.state.set(11);
         }
     }
 
@@ -593,7 +594,7 @@ impl Mesh
 
         self.draw_type = Lines;
 
-        self.state = 1;
+        self.state.set(1);
     }
 
     pub fn add_aabox(&mut self, aabox : &geometry::AABox, color : vec::Vec4)
@@ -757,7 +758,13 @@ impl Mesh
             };
         }
 
-        self.state = 1;
+        self.state.set(1);
+    }
+
+    /// Set as dirty to resend the buffers
+    pub fn set_dirty(&mut self)
+    {
+        self.state.set(1);
     }
 
 }
@@ -766,46 +773,20 @@ impl resource::ResourceT for Mesh
 {
     fn init(&mut self)
     {
-        if self.state == 0 {
+        if self.state.get() == 0 {
             self.file_read();
         }
 
-        if self.state == 1 {
+        if self.state.get() == 1 {
             for (_,b) in self.buffers_f32.iter_mut() {
                 Some(b.send());
             }
             for (_,b) in self.buffers_u32.iter_mut() {
                 Some(b.send());
             }
-            self.state = 11;
+            self.state.set(11);
         }
     }
-}
-
-impl Encodable for Mesh {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("Mesh", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Mesh {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Mesh, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Mesh{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-           state : 0,
-           buffers_f32 : HashMap::new(),
-           buffers_u32 : HashMap::new(),
-           draw_type : Faces,
-           aabox : None,
-           buffers_f32_base : HashMap::new(),
-           weights : Vec::new()
-        })
-    })
-  }
 }
 
 pub fn read_string(file: &mut File ) -> String

@@ -13,7 +13,12 @@
 #![feature(plugin)]
 //#![plugin(clippy)]
 
-extern crate rustc_serialize;
+
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
+
 extern crate byteorder;
 extern crate libc;
 //extern crate sync;
@@ -29,7 +34,6 @@ extern crate lazy_static;
 #[macro_use]
 extern crate lua;
 
-//use serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::collections::HashMap;
 use std::sync::{RwLock, Arc};
 //use std::rc::Rc;
@@ -66,6 +70,7 @@ pub mod uniform;
 pub mod matrix;
 pub mod vec;
 pub mod camera;
+pub mod camera2;
 pub mod scene;
 pub mod texture;
 pub mod geometry;

@@ -1,13 +1,9 @@
-//use component;
 use std::rc::Rc;
 use std::cell::RefCell;
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::sync::{RwLock, Arc};
 
 
 use component::{Component, Components, CompData};
-use component::manager::Encode;
-//use object::ComponentFunc;
 use object::Object;
 use transform;
 use armature;
@@ -217,7 +213,7 @@ fn update_mesh_with_armature(
         let newpos = vertex_pos + translation;
         let newnor = rotation.rotate_vec3(&vertex_nor);
 
-        mesh.state = 1;
+        mesh.set_dirty();
 
         if let Some(b) = mesh.buffer_f32_get_mut("position") {
             b.data[i*3] = newpos.x as f32;

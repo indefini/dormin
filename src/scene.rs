@@ -3,9 +3,11 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read,Write};
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use uuid::Uuid;
 use std::path::Path;
+use std::fmt;
+use serde;
+use serde_json;
 use toml;
 use armature;
 use input;
@@ -15,14 +17,287 @@ use camera;
 use component;
 use resource;
 
+use transform;
+
+#[derive(Serialize, Deserialize)]
 pub struct Scene
+{
+    pub name : String,
+    pub id : Uuid,
+    #[serde(serialize_with="serialize_refcell", deserialize_with="deserialize_option_refcell")]
+    pub camera : Option<Rc<RefCell<camera::Camera>>>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub cameras : Vec<Rc<RefCell<camera::Camera>>>,
+
+    #[serde(serialize_with="serialize_vec_arc", deserialize_with="deserialize_vec_arc")]
+    pub objects : Vec<Arc<RwLock<object::Object>>>,
+
+    #[serde(skip_serializing, skip_deserializing)]
+    pub transforms : Vec<transform::Transform>,
+}
+
+//TODO remove all serde manual implementations.
+fn deserialize_option_refcell<D, T>(d : D) ->
+    Result<Option<Rc<RefCell<T>>>, D::Error> where D: serde::Deserializer, T : serde::Deserialize
+{
+    if let Ok(r) = deserialize_refcell(d) {
+        Ok(Some(Rc::new(r)))
+    }
+    else {
+        Ok(None)
+    }
+}
+
+fn deserialize_refcell<D, T>(d : D) -> Result<RefCell<T>, D::Error> where D: serde::Deserializer, T : serde::Deserialize
+{
+    let value = try!(T::deserialize(d));
+    Ok(RefCell::new(value))
+}
+
+
+fn serialize_refcell<S,T>(t: &Option<Rc<RefCell<T>>>, s : S) -> Result<S::Ok, S::Error> where S: serde::Serializer, T : serde::Serialize
+{
+    if let Some(ref t) = *t {
+        t.borrow().serialize(s)
+    }
+    else {
+        s.serialize_none()
+    }
+}
+
+fn deserialize_vec_arc<D, T>(d : D) -> Result<Vec<Arc<RwLock<T>>>, D::Error> where D: serde::Deserializer, T : serde::Deserialize
+{
+    use std::marker::PhantomData;
+
+    pub struct VisitorVec<T> {
+        marker: PhantomData<T>,
+    }
+
+    impl<T> VisitorVec<T>
+            where T : serde::Deserialize
+        {
+            pub fn new() -> Self {
+                VisitorVec {
+                    marker: PhantomData,
+                }
+            }
+}
+
+    impl<T> serde::de::Visitor for VisitorVec<T> where T: serde::Deserialize {
+        type Value = Vec<Arc<RwLock<T>>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a sequence")
+        }
+
+        #[inline]
+        fn visit_unit<E>(self) -> Result<Vec<Arc<RwLock<T>>>, E> where E: serde::de::Error,
+        {
+            Ok(Vec::new())
+        }
+
+        #[inline]
+        fn visit_seq<V>(self, mut v: V) -> Result<Vec<Arc<RwLock<T>>>, V::Error>
+            where V: serde::de::SeqVisitor,
+        {
+            let mut values = Vec::new();
+
+            while let Some(value) = try!(v.visit()) {
+                Vec::push(&mut values, Arc::new(RwLock::new(value)));
+            }
+
+            Ok(values)
+        }
+    }
+
+    d.deserialize_seq(VisitorVec::new())
+}
+
+use serde::ser::SerializeSeq;
+fn serialize_vec_arc<S,T>(t: &Vec<Arc<RwLock<T>>>, s : S) -> Result<S::Ok, S::Error> where S: serde::Serializer, T : serde::Serialize
+{
+    let mut seq = s.serialize_seq(Some(t.len()))?;
+    for e in t {
+        seq.serialize_element(&*e.read().unwrap())?;
+    }
+    seq.end()
+}
+
+
+pub enum CompIdent {
+    String(String),
+    Enemy,
+}
+
+struct CompRef
+{
+    kind : String,
+    index : usize,
+    used_count : usize
+}
+
+pub struct Object2
+{
+    pub name : String,
+    id : Uuid,
+    index : usize,
+    alive : bool,
+    used_count : usize,
+
+    components : Vec<CompRef>
+}
+
+impl Object2 {
+
+    fn as_ref(&self) -> ObRef {
+        ObRef {
+            index : self.index,
+            used_count : self.used_count
+        }
+    }
+}
+
+pub struct Scene2
 {
     pub name : String,
     pub id : Uuid,
     pub camera : Option<Rc<RefCell<camera::Camera>>>,
     pub cameras : Vec<Rc<RefCell<camera::Camera>>>,
 
-    pub objects : Vec<Arc<RwLock<object::Object>>>,
+    //object identification
+    pub objects : Vec<Object2>,
+    //local transform
+    transforms : Vec<transform::Transform>,
+    //graph
+    children : Vec<Vec<usize>>,
+    parents : Vec<Option<usize>>,
+
+    //objects that are referenced by others,
+    //if removed/changed notice them... really notice them?
+    //is_ref_by : Vec<Vec<ObRef>>,
+    //has_ref_to : Vec<Vec<ObRef>>
+}
+
+struct ObRef
+{
+    index : usize,
+    used_count : usize
+}
+
+impl Scene2
+{
+    fn get_mut(&mut self, oref : &ObRef) -> Option<&mut Object2>
+    {
+        let o = &mut self.objects[oref.index];
+        if o.used_count == oref.used_count {
+            Some(o) 
+        }
+        else {
+            None
+        }
+    }
+
+    fn get(&mut self, oref : &ObRef) -> Option<&Object2>
+    {
+        let o = &self.objects[oref.index];
+        if o.used_count == oref.used_count {
+            Some(o) 
+        }
+        else {
+            None
+        }
+    }
+
+    fn set_parent(&mut self, o : &Object2, new_parent : Option<&Object2>)
+    {
+        if let Some(p) = new_parent {
+            self.parents[o.index] = Some(p.index);
+        }
+        else {
+            self.parents[o.index] = None;
+        }
+    }
+
+    fn add_child(&mut self, o : &Object2, child : &Object2)
+    {
+        if self.has_child(o, child) {
+            println!("already have this child");
+            return;
+        }
+        
+        self.children[o.index].push(child.index);
+    }
+
+    fn has_child(&self, o : &Object2, child : &Object2) -> bool
+    {
+        for c in &self.children[o.index]
+        {
+            if *c == child.index {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn remove_child(&mut self, o : &Object2, child : &Object2)
+    {
+        println!("TODO : don't test all! just remove and return");
+        self.children[o.index].retain(|&i| i != child.index);
+    }
+
+    fn remove_all_children(&mut self, o : &Object2)
+    {
+        self.children[o.index].clear();
+    }
+}
+
+struct Enemy {
+    target : Option<ObRef>,
+    speed : f64,
+}
+
+struct CompAll {
+    transform : Pool<transform::Transform>,
+    enemies : Pool<Enemy>
+}
+
+trait Comp2 {
+    fn new() -> Self;
+    fn reset(&mut self, scene : &mut Scene) {}
+    fn update(&mut self, ob : ObRef, scene : &mut Scene, comp_all : &CompAll) {}
+}
+
+pub struct Pool<T>
+{
+    data : Vec<T>,
+    //the number of unused cell starting from the end of the vec
+    unused : usize
+}
+
+impl<T> Pool<T>
+{
+    //fn get
+
+}
+
+impl Comp2 for Enemy {
+    fn new() -> Enemy {
+        Enemy {
+            target : None,
+            speed : 0f64
+        }
+    }
+
+    fn update(
+        &mut self,
+        ob : ObRef,
+        scene : &mut Scene,
+        comp_all : &CompAll) 
+    {
+        //let t = comp_all.transform.get(
+        //get my pos
+    }
 }
 
 impl Scene
@@ -37,7 +312,8 @@ impl Scene
             id : id,
             objects : Vec::new(),
             camera : Some(cam),
-            cameras : cameras
+            cameras : cameras,
+            transforms : Vec::new()
         }
     }
 
@@ -45,7 +321,7 @@ impl Scene
     {
         let mut file = String::new();
         File::open(&Path::new(file_path)).ok().unwrap().read_to_string(&mut file);
-        let mut scene : Scene = json::decode(file.as_ref()).unwrap();
+        let mut scene : Scene = serde_json::from_str(&file).unwrap();
 
         scene.post_read(resource);
 
@@ -155,14 +431,9 @@ impl Scene
         println!("save scene todo serialize");
         let path : &Path = self.name.as_ref();
         let mut file = File::create(path).ok().unwrap();
-        let mut s = String::new();
-        {
-            let mut encoder = json::Encoder::new_pretty(&mut s);
-            let _ = self.encode(&mut encoder);
-        }
 
-        //let result = file.write(s.as_ref().as_bytes());
-        let result = file.write(s.as_bytes());
+        let js = serde_json::to_string_pretty(self);
+        let result = file.write(js.unwrap().as_bytes());
     }
 
     pub fn object_find(&self, name : &str) -> Option<Arc<RwLock<object::Object>>>
@@ -331,20 +602,6 @@ impl Scene
         */
     }
 
-    pub fn savetoml(&self)
-    {
-        let s = toml::encode_str(self);
-        println!("encoder toml : {} ", s );
-    }
-
-    /*
-    pub fn new_toml(s : &str) -> Material
-    {
-        let mat : Material = toml::decode_str(s).unwrap();
-        mat
-    }
-    */
-
     pub fn update(
         &mut self,
         dt : f64,
@@ -383,40 +640,9 @@ impl Clone for Scene {
             camera : cam,
             cameras : self.cameras.clone(),
             objects : objects,
+            transforms : self.transforms.clone()
         }
     }
-}
-
-
-impl Encodable for Scene {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("Scene", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          try!(encoder.emit_struct_field( "id", 1usize, |encoder| self.id.encode(encoder)));
-          try!(encoder.emit_struct_field( "objects", 2usize, |encoder| self.objects.encode(encoder)));
-          try!(encoder.emit_struct_field( "camera", 3usize, |encoder| self.camera.encode(encoder)));
-          //try!(encoder.emit_struct_field( "cameras", 4usize, |encoder| self.cameras.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-impl Decodable for Scene {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Scene, D::Error> {
-      decoder.read_struct("root", 0, |decoder| {
-         Ok(Scene{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-          id: try!(decoder.read_struct_field("id", 0, |decoder| Decodable::decode(decoder))),
-         //id : Uuid::new_v4(),
-          objects: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
-          //tests: try!(decoder.read_struct_field("objects", 0, |decoder| Decodable::decode(decoder))),
-          //camera : None //try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder)))
-          camera : try!(decoder.read_struct_field("camera", 0, |decoder| Decodable::decode(decoder))),
-          cameras : Vec::new(),// try!(decoder.read_struct_field("cameras", 0, |decoder| Decodable::decode(decoder)))
-          //camera : None
-        })
-    })
-  }
 }
 
 pub fn post_read_parent_set(o : Arc<RwLock<object::Object>>)

@@ -11,7 +11,6 @@ use component::mesh_render;
 use mesh;
 
 use std::sync::{RwLock, Arc};//,RWLockReadGuard};
-use rustc_serialize::{json, Encodable, Encoder, Decoder, Decodable};
 use std::collections::hash_map::Entry::{Occupied,Vacant};
 use std::collections::HashMap;
 use uuid;
@@ -30,9 +29,7 @@ use lua;
 use libc::c_void;
 
 
-//#[derive(Decodable, Encodable)]
-//#[derive(Encodable)]
-//#[derive(Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct Object
 {
     // Object Architecture
@@ -79,11 +76,15 @@ pub struct Object
     pub position : vec::Vec3,
     pub orientation : transform::Orientation,
     pub scale : vec::Vec3,
+    #[serde(skip_serializing, skip_deserializing)]
     pub children : Vec<Arc<RwLock<Object>>>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub parent : Option<Arc<RwLock<Object>>>,
 
     // Components
+    #[serde(skip_serializing, skip_deserializing)]
     pub mesh_render : Option<mesh_render::MeshRenderer>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub components : Vec<Box<Components>>,
     pub comp_data : Vec<Box<CompData>>,
     pub comp_string : Vec<String>,
@@ -497,56 +498,6 @@ pub fn child_add(parent : Arc<RwLock<Object>>, child : Arc<RwLock<Object>>)
     child.write().unwrap().parent = Some(parent.clone());
 }
 
-
-impl Decodable for Object {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<Object, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(Object{
-          name: try!(decoder.read_struct_field("name", 0, |decoder| Decodable::decode(decoder))),
-          id: try!(decoder.read_struct_field("id", 0, |decoder| Decodable::decode(decoder))),
-          mesh_render: None, //try!(decoder.read_struct_field("mesh_render", 0, |decoder| Decodable::decode(decoder))),
-          position: try!(decoder.read_struct_field("position", 0, |decoder| Decodable::decode(decoder))),
-          orientation: try!(decoder.read_struct_field("orientation", 0, |decoder| Decodable::decode(decoder))),
-          scale: try!(decoder.read_struct_field("scale", 0, |decoder| Decodable::decode(decoder))),
-          children: try!(decoder.read_struct_field("children", 0, |decoder| Decodable::decode(decoder))),
-          //parent: try!(decoder.read_struct_field("children", 0, |decoder| Decodable::decode(decoder))),
-          parent: None,
-          //transform : box transform::Transform::new()
-          components : Vec::new(),
-          //comp_data : Rc::new(RefCell::new(Vec::new()))
-          //components: try!(decoder.read_struct_field("components", 0, |decoder| Decodable::decode(decoder))),
-          comp_data: try!(decoder.read_struct_field("comp_data", 0, |decoder| Decodable::decode(decoder))),
-          comp_string: try!(decoder.read_struct_field("components", 0, |decoder| Decodable::decode(decoder))),
-          comp_lua: try!(decoder.read_struct_field("comp_lua", 0, |decoder| Decodable::decode(decoder))),
-          //comp_lua : Vec::new()
-        })
-    })
-  }
-}
-
-
-impl Encodable  for Object {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("Object", 1, |encoder| {
-          try!(encoder.emit_struct_field( "name", 0usize, |encoder| self.name.encode(encoder)));
-          try!(encoder.emit_struct_field( "id", 1usize, |encoder| self.id.encode(encoder)));
-          //try!(encoder.emit_struct_field( "mesh_render", 2usize, |encoder| self.mesh_render.encode(encoder)));
-          try!(encoder.emit_struct_field( "position", 3usize, |encoder| self.position.encode(encoder)));
-          try!(encoder.emit_struct_field( "orientation", 4usize, |encoder| self.orientation.encode(encoder)));
-          try!(encoder.emit_struct_field( "scale", 5usize, |encoder| self.scale.encode(encoder)));
-          try!(encoder.emit_struct_field( "children", 6usize, |encoder| self.children.encode(encoder)));
-          //try!(encoder.emit_struct_field( "transform", 7u, |encoder| self.transform.encode(encoder)));
-          //try!(encoder.emit_struct_field( "parent", 6u, |encoder| self.parent.encode(encoder)));
-          //try!(encoder.emit_struct_field( "components", 7usize, |encoder| self.components.encode(encoder)));
-          try!(encoder.emit_struct_field( "components", 7usize, |encoder| self.comp_string.encode(encoder)));
-          try!(encoder.emit_struct_field( "comp_data", 8usize, |encoder| self.comp_data.encode(encoder)));
-          try!(encoder.emit_struct_field( "comp_lua", 9usize, |encoder| self.comp_lua.encode(encoder)));
-          Ok(())
-      })
-  }
-}
-
-
 /*
 impl Clone for Object
 {
@@ -592,26 +543,6 @@ impl ObjectRef
             object : Some(o)
         }
     }
-}
-
-impl Decodable for ObjectRef {
-  fn decode<D : Decoder>(decoder: &mut D) -> Result<ObjectRef, D::Error> {
-    decoder.read_struct("root", 0, |decoder| {
-         Ok(ObjectRef{
-          id: try!(decoder.read_struct_field("id", 0, |decoder| Decodable::decode(decoder))),
-          object: None,
-        })
-    })
-  }
-}
-
-impl Encodable  for ObjectRef {
-  fn encode<E : Encoder>(&self, encoder: &mut E) -> Result<(), E::Error> {
-      encoder.emit_struct("ObjectRef", 1, |encoder| {
-          try!(encoder.emit_struct_field( "id", 0usize, |encoder| self.id.encode(encoder)));
-          Ok(())
-      })
-  }
 }
 
 lua_extern! {
