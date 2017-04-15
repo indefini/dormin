@@ -1266,15 +1266,17 @@ impl<'a> TransformGraph
 }
 */
 
-//T is the id of your object/entity
-pub fn get_transforms_of_objects_in_camera_frustum<'a, T>(
+//T is used to identify your object, is the id of your object/entity,
+pub fn get_transforms_of_objects_in_camera_frustum<'a, T:Copy>(
     cam : &camera2::Camera,
     cam_mat : &matrix::Matrix4, 
     world_matrices : &[(&'a T, &'a matrix::Matrix4)]
-    ) -> Vec<(&'a T, &'a matrix::Matrix4)> //usize or entity
+    //) -> Vec<&'a T> //usize or entity
+    ) -> Vec<T> //usize or entity
 {
     //TODO
-    world_matrices.iter().map(|x| *x).collect()
+    //world_matrices.iter().map(|x| *x).collect()
+    world_matrices.iter().map(|x| *x.0).collect()
 }
 
 fn test(w : &mut TransformGraph)
