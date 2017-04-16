@@ -369,12 +369,12 @@ impl Render {
         //self.fbo_all.write().unwrap().cgl_create();
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
         {
-            let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
+            let fbo_all = fbo_mgr.get_mut_or_panic(self.fbo_all);
             //fbo_all.write().unwrap().cgl_create();
             fbo_all.cgl_create();
         }
 
-        let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
+        let fbo_sel = fbo_mgr.get_mut_or_panic(self.fbo_selected);
         fbo_sel.cgl_create();
     }
 
@@ -398,12 +398,12 @@ impl Render {
             //fbo_all.write().unwrap().cgl_resize(w, h);
             let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
             {
-                let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
+                let fbo_all = fbo_mgr.get_mut_or_panic(self.fbo_all);
                 fbo_all.cgl_resize(w, h);
                 //    self.fbo_selected.write().unwrap().cgl_resize(w, h);
             }
 
-            let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
+            let fbo_sel = fbo_mgr.get_mut_or_panic(self.fbo_selected);
             fbo_sel.cgl_resize(w,h);
         }
 
@@ -559,7 +559,7 @@ impl Render {
         //self.fbo_selected.read().unwrap().cgl_use();
         {
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
-        let fbo_sel = fbo_mgr.get_from_index2(self.fbo_selected);
+        let fbo_sel = fbo_mgr.get_mut_or_panic(self.fbo_selected);
         fbo_sel.cgl_use();
         }
         for p in self.passes.values()
@@ -610,7 +610,7 @@ impl Render {
         //fbo_all.write().unwrap().cgl_use();
         
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
-        let fbo_all = fbo_mgr.get_from_index2(self.fbo_all);
+        let fbo_all = fbo_mgr.get_mut_or_panic(self.fbo_all);
         fbo_all.cgl_use();
         for p in self.passes.values()
         {
@@ -773,7 +773,7 @@ fn prepare_passes_object(
 
         //let mmm = &mut mat.write().unwrap().shader;
         let matname = mat.name.clone();
-        let mmm = &mut mat.get_no_load(material_manager).unwrap().shader;
+        let mmm = &mut mat.get(material_manager).unwrap().shader;
 
         let mut shader_yep = match *mmm {
             Some(ref mut s) => s,
@@ -978,6 +978,60 @@ impl GameRender {
         not_yet_loaded > 0
     }
 }
+
+fn send_shader_sampler(
+    shader : &shader::Shader,
+    sampler : &HashMap<String, material::Sampler>,
+    texture_manager : &mut resource::ResourceManager<texture::Texture>,
+    fbo_manager : &mut resource::ResourceManager<fbo::Fbo>,
+    ) -> usize
+{
+    let mut not_loaded = 0;
+
+    let mut i = 0u32;
+    for (name,t) in sampler.iter() {
+        match *t {
+            material::Sampler::ImageFile(ref img) => {
+                let r = resource::resource_get_ref(texture_manager, img);
+                match r {
+                    Some(tex) => {
+                        tex.init();
+                        //TODO must release but this is mut,  so release somewhere else
+                        //tex.release();
+                        shader.texture_set(name.as_ref(), & *tex, i);
+                        i = i +1;
+                    },
+                    None => {
+                        not_loaded = not_loaded + 1;
+                        println!("there is NONONO tex........ {}", name);
+                    }
+                }
+            },
+            material::Sampler::Fbo(ref fbo, ref attachment) => {
+                let yoyo = fbo_manager.get_or_create(fbo.name.as_str());
+                let fbosamp = uniform::FboSampler { 
+                    fbo : yoyo,
+                    attachment : *attachment
+                };
+                shader.texture_set(name.as_ref(), &fbosamp,i);
+                i = i +1;
+            },
+        }
+    }
+
+    not_loaded
+}
+
+fn send_shader_uniforms(
+    shader : &shader::Shader,
+    uniforms : &HashMap<String, Box<shader::UniformData>>
+    )
+{
+    for (k,v) in uniforms.iter() {
+        shader.uniform_set(k.as_ref(), &(**v));
+    }
+}
+
 
 fn object_init_mat(
         material : &mut material::Material,
@@ -1285,31 +1339,52 @@ fn test(w : &mut TransformGraph)
     t.position.x = 5f64;
 }
 
-struct ShaderInput
+pub struct ShaderInput
 {
     pub textures : HashMap<String, material::Sampler>,
     //pub uniforms : HashMap<String, Box<UniformSend+'static>>,
     pub uniforms : HashMap<String, Box<shader::UniformData>>,
 }
 
-struct RenderData<'a> {
-    mat : &'a matrix::Matrix4,
-    input : &'a ShaderInput,
+impl ShaderInput {
+    pub fn new() -> ShaderInput {
+        ShaderInput {
+            textures : HashMap::new(),
+            uniforms : HashMap::new(),
+        }
+    }
 }
 
-fn draw(
+//TODO put shader, mesh, shaderinput as id?
+pub fn draw(
     camera_world : &matrix::Matrix4,
     object_world : &matrix::Matrix4,
     shader : &shader::Shader,
-    material : &material::Material,
+    mesh : &mesh::Mesh,
+    input : &ShaderInput,
     resource : &resource::ResourceGroup,
-    //load : Arc<Mutex<usize>>
     )
 {
     //object_init_mat(material, shader, resource, load);
     //TODO do this one level up and dont pass 2 matrix, but only one
     let mat = camera_world * object_world;
     set_matrix(shader, &mat);
+
+    let not_yet_loaded = send_shader_sampler(
+        shader,
+        &input.textures,
+        &mut *resource.texture_manager.borrow_mut(),
+        &mut *resource.fbo_manager.borrow_mut(),
+        );
+
+    //TODO what to do if not_yet_loaded > 0
+
+    send_shader_uniforms(
+        shader,
+        &input.uniforms
+        );
+    
+    draw_mesh(shader, mesh);
 }
 
 fn set_matrix(shader :&shader::Shader, matrix : &matrix::Matrix4)
