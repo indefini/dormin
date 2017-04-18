@@ -163,7 +163,6 @@ impl Material
             }
         };
     }
-
 }
 
 impl resource::ResourceT for Material

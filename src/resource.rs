@@ -62,15 +62,6 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         }
     }
 
-    pub fn create_instance(&mut self)
-    {
-        if self.instance.is_none() {
-            let mut mt : T = Create::create(self.name.as_ref());
-            mt.inittt();
-            self.instance = Some(mt);
-        }
-    }
-
     pub fn new_with_instance(name : &str, r : T) -> ResTT<T>
     {
         ResTT {

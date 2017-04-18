@@ -1353,6 +1353,14 @@ impl ShaderInput {
             uniforms : HashMap::new(),
         }
     }
+
+    pub fn from_material(mat : &material::Material) -> ShaderInput
+    {
+        ShaderInput {
+            textures : mat.textures.clone(),
+            uniforms : mat.uniforms.clone(),
+        }
+    }
 }
 
 //TODO put shader, mesh, shaderinput as id?

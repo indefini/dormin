@@ -29,18 +29,6 @@ pub fn create_table_mesh(table : Table) -> mesh::Mesh
     m
 }
 
-/*
-pub fn create_mesh_render(mesh : mesh::Mesh) -> mesh_render::MeshRender
-{
-    let mr = resource::ResTT::new_with_res("table", mesh);
-
-    let mesh_render =
-        mesh_render::MeshRender::new_with_mesh(mr, "material/line.mat");
-
-    mesh_render
-}
-*/
-
 fn create_table(m : &mut mesh::Mesh)
 {
 }
