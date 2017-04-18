@@ -79,10 +79,6 @@ impl Component for MeshRenderer
 }
 
 impl MeshRenderer{
-    fn create_mesh_instance(&mut self) 
-    {
-        self.mesh.create_instance();
-    }
 
     pub fn get_or_create_mesh_instance(& mut self) -> & mut mesh::Mesh
     {

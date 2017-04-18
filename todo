@@ -1,5 +1,9 @@
 extract state and cgl_* in mesh, texture etc... and put them in resource manager.
 
+when a mesh use a shader, register it in dormin like
+HashMap<shader, Vec<mesh>>?
+and register objects that use shader
+
 TODO scene and camera clone are wrong : object id
 
 remove arc/rwlock especially in restest/resdata

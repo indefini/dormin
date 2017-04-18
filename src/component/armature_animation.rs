@@ -106,10 +106,6 @@ impl Component for ArmatureAnimation
         let mut mi = mr.get_or_create_mesh_instance();
         update_mesh_with_armature(&base, mi, &self.arm_instance);
 
-            //if let Some(ref m) = mr.mesh_instance {
-            //m.apply_armature_pose(self.arm_instance);
-            //}
-
         //let normal_pose = 
 
         //TODO get the current animation pose with the action name and the time.

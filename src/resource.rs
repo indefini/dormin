@@ -456,7 +456,8 @@ pub struct ResourceManager<T>
     //usize is the index in loaded vec of the resource
     map : HashMap<String, usize>,
     loaded : Vec<State<T>>,
-    state : Vec<usize>
+
+    //instanced : Vec<T>,
 
     // Other possible ways
     //map : HashMap<String, usize>, => saves index to ids, and id never change
@@ -489,7 +490,6 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         ResourceManager {
             map : HashMap::new(),
             loaded : Vec::new(),
-            state : Vec::new()
         }
     }
 
