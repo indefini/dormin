@@ -32,7 +32,7 @@ impl MeshRender
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MeshRenderer
 {
     pub mesh : ResTT<mesh::Mesh>,
