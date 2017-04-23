@@ -84,6 +84,7 @@ pub mod model;
 
 pub mod component;
 pub use component::manager;
+pub mod world;
 
 
 mod util;
