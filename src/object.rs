@@ -381,7 +381,7 @@ impl Object
         input : &input::Input,
         resource : &resource::ResourceGroup)
     {
-        self.luastuff(dt);
+        //self.luastuff(dt);
 
         let len = self.components.len();
 

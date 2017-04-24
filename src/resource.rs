@@ -175,7 +175,7 @@ impl<T> Clone for ResTT<T>
 {
     fn clone(&self) -> ResTT<T>
     {
-        println!("WARNING : clone for resource is TODO, because of instance");
+        //println!("WARNING : clone for resource is TODO, because of instance");
         ResTT {
             name : self.name.clone(),
             resource : self.resource.clone(),

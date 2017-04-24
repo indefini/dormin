@@ -684,7 +684,16 @@ pub struct World {
     owners : DataOwners
 }
 
-impl World {
+impl World
+{
+    pub fn new() -> World {
+        World {
+            entities : Vec::new(),
+            entities_comps : Vec::new(),
+            owners : DataOwners::new()
+        }
+    }
+
     fn update(&self, data : &mut Data)
     {
         //let events = Vec::new();
