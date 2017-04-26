@@ -155,7 +155,7 @@ impl WorldChange for Nothing
     }
 }
 
-trait Component {
+pub trait Component {
     const ID : &'static str;
 
     fn update(&mut self, entity : &EntityMut, world : &World, data : &mut Data) -> Box<WorldChange>
@@ -799,7 +799,7 @@ impl World
         }
     }
 
-    fn get_comp_mut<'a, T:Component + Any>(&self, data : &'a mut Data, e : &EntityMut) -> Option<&'a mut T>
+    pub fn get_comp_mut<'a, T:Component + Any>(&self, data : &'a mut Data, e : &EntityMut) -> Option<&'a mut T>
     {
         if let Some(v) = self.entities_comps[e.id].get(T::ID) {
             data.get_mut::<T>(*v)
@@ -889,3 +889,9 @@ pub trait WorldTrait : Default {
 
     }
 }
+
+pub struct WorldRefDataMut<'a> {
+    pub world : &'a World,
+    pub data : &'a mut Data
+}
+

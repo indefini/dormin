@@ -422,7 +422,7 @@ impl<T> State<T>
         match *self {
             State::Loading(ref mut ojh, ref l) => {
                 let jh = ojh.take().unwrap();
-                jh.join();
+                jh.join().expect("The thread could not join in finalize2");
                 let is_some = {
                     let v : &Option<T> = &*l.read().unwrap();
                     v.is_some()

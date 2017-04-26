@@ -12,6 +12,7 @@ use mesh;
 use material;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::sync::{Arc, RwLock};
 
 //log_syntax!()
 //trace_macros!(true)
@@ -397,6 +398,14 @@ impl<T:PropertyGet> PropertyGet for Rc<RefCell<T>>
   fn get_property_hier(&self, name : &str) -> Option<Box<Any>>
   {
       self.borrow().get_property_hier(name)
+  }
+}
+
+impl<T:PropertyGet> PropertyGet for Arc<RwLock<T>>
+{
+  fn get_property_hier(&self, name : &str) -> Option<Box<Any>>
+  {
+      self.read().unwrap().get_property_hier(name)
   }
 }
 
