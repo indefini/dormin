@@ -288,6 +288,19 @@ impl<T:PropertyWrite> PropertyWrite for Rc<RefCell<T>>
   }
 }
 
+impl<T:PropertyWrite> PropertyWrite for Arc<RwLock<T>>
+{
+  fn test_set_property(&mut self, value: &Any)
+  {
+      self.write().unwrap().test_set_property(value);
+  }
+
+  fn test_set_property_hier(&mut self, name : &str, value: &Any)
+  {
+      self.write().unwrap().test_set_property_hier(name, value);
+  }
+}
+
 
 //impl<T:PropertyWrite+'static+Clone+resource::Create> PropertyWrite for Option<T>
 impl<T:PropertyWrite+Any+Clone+resource::Create> PropertyWrite for Option<T>
