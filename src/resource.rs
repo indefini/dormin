@@ -522,7 +522,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         self.loaded.iter_mut().filter_map(filter)
     }
 
-    fn getResState(&self, name : &str) -> Test
+    fn get_res_state(&self, name : &str) -> Test
     {
         match self.map.get(name) {
             None => {
@@ -543,7 +543,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn get_ref_from_name(&self, name : &str) -> Option<&T>
     {
-        match self.getResState(name) {
+        match self.get_res_state(name) {
             Test::Other(i) => {
                 let li = &self.loaded[i];
                 match *li {
@@ -558,7 +558,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn get_or_load_mut_from_name(&mut self, name : &str) -> (usize, Option<&mut T>)
     {
-        match self.getResState(name) {
+        match self.get_res_state(name) {
             Test::None => {
                 let index = self.loaded.len();
                 let key = String::from(name);
@@ -592,7 +592,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn get_or_load_ref_from_name(&mut self, name : &str) -> (usize, Option<&T>)
     {
-        match self.getResState(name) {
+        match self.get_res_state(name) {
             Test::None => {
                 let index = self.loaded.len();
                 let key = String::from(name);
@@ -931,12 +931,57 @@ pub fn resource_get_ref<'a, T:'static+Create+Send+Sync>(
         res.instance.as_ref()
     }
     else if let Some(i) = res.resource {
-        manager.get_as_ref(i)
+        manager.get_ref(i)
     }
     else {
         let (i, r) = manager.get_or_load_ref_from_name(res.name.as_ref());
         //TODO use Cell?
+        println!("TODO, should use cell, because we use the hashmap everytime here");
         //res.resource = Some(i);
+        r
+    }
+}
+
+pub fn resource_get_ref_with_mut<'a, T:'static+Create+Send+Sync>(
+    manager : &'a mut ResourceManager<T>,
+    res: &'a mut ResTT<T>,
+    )
+    -> Option<&'a T>
+{
+    if res.instance.is_some() {
+        println!("has instance, so ok : {}", res.name);
+        res.instance.as_ref()
+    }
+    else if let Some(i) = res.resource {
+        println!("has ref, so ok : {}", res.name);
+        manager.get_ref(i)
+    }
+    else {
+        println!("will load, : {}", res.name);
+        let (i, r) = manager.get_or_load_ref_from_name(res.name.as_ref());
+        //TODO use Cell?
+        res.resource = Some(i);
+        r
+    }
+}
+
+
+pub fn resource_get_mut<'a, T:'static+Create+Send+Sync>(
+    manager : &'a mut ResourceManager<T>,
+    res: &'a mut ResTT<T>,
+    )
+    -> Option<&'a mut T>
+{
+    if res.instance.is_some() {
+        res.instance.as_mut()
+    }
+    else if let Some(i) = res.resource {
+        manager.get_mut(i)
+    }
+    else {
+        let (i, r) = manager.get_or_load_mut_from_name(res.name.as_ref());
+        //TODO use Cell?
+        res.resource = Some(i);
         r
     }
 }

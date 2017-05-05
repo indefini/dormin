@@ -521,8 +521,6 @@ impl Data {
         }
     }
 
-
-
     fn get_comp(&self, name : &str, index : usize) -> Option<&Component>
     {
         match name {

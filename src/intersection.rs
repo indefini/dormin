@@ -48,7 +48,12 @@ pub fn ray_object(
             //let m = &mr.mesh;
             //ray_mesh(ray, &*m.read().unwrap(), &wp, &wq, &ws)
             let m = &mr.mesh;
-            ray_mesh(ray, m.as_ref(&mut *resource.mesh_manager.borrow_mut()).unwrap(), &wp, &wq, &ws)
+            if let Some(mesh) = m.as_ref(&mut *resource.mesh_manager.borrow_mut()) {
+                ray_mesh(ray, mesh, &wp, &wq, &ws)
+            }
+            else {
+                out
+            }
         }
     }
 }

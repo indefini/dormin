@@ -317,18 +317,18 @@ impl Scene
         }
     }
 
-    pub fn new_from_file(file_path : &str, resource :&resource::ResourceGroup) -> Scene
+    pub fn new_from_file(file_path : &str) -> Scene
     {
         let mut file = String::new();
         File::open(&Path::new(file_path)).ok().unwrap().read_to_string(&mut file);
         let mut scene : Scene = serde_json::from_str(&file).unwrap();
 
-        scene.post_read(resource);
+        scene.post_read();
 
         scene
     }
 
-    fn post_read(&mut self, resource : &resource::ResourceGroup)
+    fn post_read(&mut self)
     {
         for o in self.objects.iter()
         {
@@ -411,7 +411,7 @@ impl Scene
             let omr = ob.get_comp_data_value::<component::mesh_render::MeshRender>();
             if let Some(ref mr) = omr {
                 ob.mesh_render = 
-                    Some(component::mesh_render::MeshRenderer::with_mesh_render(mr,resource));
+                    Some(component::mesh_render::MeshRenderer::with_names_only(&mr.mesh,&mr.material));
             }
         }
     }

@@ -110,6 +110,15 @@ impl MeshRenderer{
         }
     }
 
+    pub fn with_names_only(mesh : &str, material : &str) -> MeshRenderer
+    {
+        MeshRenderer {
+            mesh : resource::ResTT::new(mesh),
+            material : resource::ResTT::new(material)
+        }
+    }
+
+
     pub fn with_mesh_render(mesh_render : &MeshRender, resource : &resource::ResourceGroup) -> MeshRenderer
     {
         MeshRenderer::with_names(mesh_render.mesh.as_str(), mesh_render.material.as_str(), resource)

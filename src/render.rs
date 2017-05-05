@@ -210,8 +210,13 @@ impl RenderPass
         {
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
 
-            let m = mr.mesh.get(mesh_manager).unwrap();
-            init_mesh(m, shader)
+            let debug = mr.mesh.name.clone();
+            if let Some(m) = resource::resource_get_ref_with_mut(mesh_manager, &mut mr.mesh) {
+                init_mesh(m, shader)
+            }
+            else {
+                (false, 0usize)
+            }
         };
 
         let (can_render, vertex_data_count) = init_mesh_render(ob.mesh_render.as_mut().unwrap());
@@ -771,9 +776,13 @@ fn prepare_passes_object(
             }
         };
 
-        //let mmm = &mut mat.write().unwrap().shader;
         let matname = mat.name.clone();
-        let mmm = &mut mat.get(material_manager).unwrap().shader;
+        let mmm = if let Some(m) = resource::resource_get_mut(material_manager, mat) {
+            &mut m.shader
+        }
+        else {
+            return
+        };
 
         let mut shader_yep = match *mmm {
             Some(ref mut s) => s,
@@ -1003,7 +1012,7 @@ fn send_shader_sampler(
                     },
                     None => {
                         not_loaded = not_loaded + 1;
-                        println!("there is NONONO tex........ {}", name);
+                        println!("-------------------------there is NONONO tex........ {}", name);
                     }
                 }
             },
