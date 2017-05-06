@@ -14,29 +14,20 @@ use material;
 use property::{PropertyRead, PropertyGet, PropertyWrite, WriteValue};
 use std::any::Any;
 
-#[derive(Serialize, Deserialize, Clone, Default)]
-pub struct MeshRender
-{
-    pub mesh : String,
-    pub material : String,
-}
-
-impl MeshRender
-{
-    pub fn new(mesh : &str, material : &str) -> MeshRender
-    {
-        MeshRender {
-            mesh : mesh.to_owned(),
-            material : material.to_owned(),
-        }
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MeshRenderer
 {
     pub mesh : ResTT<mesh::Mesh>,
     pub material : ResTT<material::Material>,
+}
+
+impl Default for MeshRenderer {
+    fn default() -> MeshRenderer {
+        MeshRenderer  {
+            mesh : ResTT::new("no_mesh"),
+            material : ResTT::new("no_mat"),
+        }
+    }
 }
 
 impl Component for MeshRenderer
@@ -85,21 +76,9 @@ impl MeshRenderer{
         self.mesh.get_or_create_instance()
     }
 
-    pub fn get_mesh(&self) -> ResTT<mesh::Mesh>// Arc<RwLock<mesh::Mesh>>
+    pub fn get_mesh(&self) -> ResTT<mesh::Mesh>
     {
         self.mesh.clone()
-    }
-
-    pub fn new(ob : &Object, resource : &resource::ResourceGroup) -> MeshRenderer
-    {
-        let mesh_render = {
-            match ob.get_comp_data::<MeshRender>(){
-                Some(m) => m.clone(),
-                None => panic!("no mesh data")
-            }
-        };
-
-        MeshRenderer::with_mesh_render(&mesh_render, resource)
     }
 
     pub fn with_names(mesh : &str, material : &str, resource : &resource::ResourceGroup) -> MeshRenderer
@@ -118,14 +97,7 @@ impl MeshRenderer{
         }
     }
 
-
-    pub fn with_mesh_render(mesh_render : &MeshRender, resource : &resource::ResourceGroup) -> MeshRenderer
-    {
-        MeshRenderer::with_names(mesh_render.mesh.as_str(), mesh_render.material.as_str(), resource)
-    }
-
     pub fn new_with_mesh_res(
-        //mesh : Arc<RwLock<mesh::Mesh>>,
         mesh : ResTT<mesh::Mesh>,
         material : &str,
         resource : &resource::ResourceGroup) -> MeshRenderer
@@ -195,11 +167,6 @@ impl MeshRenderer{
     }
 }
 
-pub fn new(ob : &Object, resource : &resource::ResourceGroup) -> Box<Component>
-{
-    box MeshRenderer::new(ob, resource)
-}
-
-property_set_impl!(MeshRender,[mesh,material]);
-property_get_impl!(MeshRender,[mesh,material]);
+property_set_impl!(MeshRenderer,[mesh,material]);
+property_get_impl!(MeshRenderer,[mesh,material]);
 

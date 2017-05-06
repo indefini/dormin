@@ -6,7 +6,7 @@ use object::Object;
 use std::any::Any;
 use component::player::{Player, Enemy, Collider};
 use armature::ArmaturePath;
-use component::mesh_render::{MeshRender, MeshRenderer};
+use component::mesh_render::{MeshRenderer};
 use component::armature_animation::ArmatureAnimation;
 use component::player::PlayerBehavior;
 use resource;
@@ -412,7 +412,7 @@ compdata_def!(
     Enemy,
     Collider,
     ArmaturePath,
-    MeshRender
+    MeshRenderer
 );
 
 

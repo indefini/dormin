@@ -408,10 +408,9 @@ impl Scene
                 println!("there is armature path");
             }
 
-            let omr = ob.get_comp_data_value::<component::mesh_render::MeshRender>();
+            let omr = ob.get_comp_data_value::<component::mesh_render::MeshRenderer>();
             if let Some(ref mr) = omr {
-                ob.mesh_render = 
-                    Some(component::mesh_render::MeshRenderer::with_names_only(&mr.mesh,&mr.material));
+                ob.mesh_render = Some(mr.clone())
             }
         }
     }
