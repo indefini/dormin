@@ -9,7 +9,7 @@ use serde;
 use ::{render,vec,matrix,camera2,mesh,resource,shader,material};
 use transform::Transform;
 use camera2::Camera;
-use component::mesh_render::MeshRenderer;
+use component::mesh_render::MeshRender;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Entity
@@ -391,7 +391,7 @@ impl Component for Camera {
     }
 }
 
-impl Component for MeshRenderer {
+impl Component for MeshRender {
     const ID : &'static str = "mesh_renderer";
 
      fn as_any(&self) -> &Any {
@@ -413,7 +413,7 @@ pub struct Data {
     weapon : Vec<Weapon>,
     transform : Vec<Transform>,
     camera : Vec<Camera>,
-    mesh_render : Vec<MeshRenderer>
+    mesh_render : Vec<MeshRender>
 }
 
 impl Data {

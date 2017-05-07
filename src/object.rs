@@ -83,7 +83,7 @@ pub struct Object
 
     // Components
     #[serde(skip_serializing, skip_deserializing)]
-    pub mesh_render : Option<mesh_render::MeshRenderer>,
+    pub mesh_render : Option<mesh_render::MeshRender>,
     #[serde(skip_serializing, skip_deserializing)]
     pub components : Vec<Box<Components>>,
     pub comp_data : Vec<Box<CompData>>,

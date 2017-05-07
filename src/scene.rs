@@ -408,7 +408,7 @@ impl Scene
                 println!("there is armature path");
             }
 
-            let omr = ob.get_comp_data_value::<component::mesh_render::MeshRenderer>();
+            let omr = ob.get_comp_data_value::<component::mesh_render::MeshRender>();
             if let Some(ref mr) = omr {
                 ob.mesh_render = Some(mr.clone())
             }

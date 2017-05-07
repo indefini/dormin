@@ -196,7 +196,7 @@ impl RenderPass
             return not_loaded;
         }
 
-        let init_material = |mr : &mut mesh_render::MeshRenderer| -> usize
+        let init_material = |mr : &mut mesh_render::MeshRender| -> usize
         {
             let material_manager = &mut *resource.material_manager.borrow_mut();
             let m = mr.material.get(material_manager).unwrap();
@@ -206,7 +206,7 @@ impl RenderPass
 
         not_loaded = init_material(ob.mesh_render.as_mut().unwrap());
 
-        let init_mesh_render = |mr : &mut mesh_render::MeshRenderer|  -> (bool, usize)
+        let init_mesh_render = |mr : &mut mesh_render::MeshRender|  -> (bool, usize)
         {
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
 
@@ -227,7 +227,7 @@ impl RenderPass
             let object_mat_world = matrix * &object_mat ;
             shader.uniform_set("matrix", &object_mat_world);
 
-            let draw_mesh = |mr : &mut mesh_render::MeshRenderer|
+            let draw_mesh = |mr : &mut mesh_render::MeshRender|
             {
                 let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
                 let m = mr.mesh.get(mesh_manager).unwrap();
@@ -316,7 +316,7 @@ impl Render {
             let mut m = mesh::Mesh::new();
             create_grid(&mut m, 100i32, 1i32);
 
-            let mere = mesh_render::MeshRenderer::new_with_mesh(
+            let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
                 "material/line.mat",
                 &*resource);
@@ -328,7 +328,7 @@ impl Render {
             let mut m = mesh::Mesh::new();
             create_repere(&mut m, 40f64 );
 
-            let mere = mesh_render::MeshRenderer::new_with_mesh(
+            let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
                 "material/line.mat",
                 &*resource);
@@ -342,7 +342,7 @@ impl Render {
             shader_manager.borrow_mut().request_use_no_proc_new("shader/outline.sh");
             let outline_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/outline.mat");
 
-            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat_res(ResTT::new_with_instance("outline_quad", m), outline_mat);
+            let mere = mesh_render::MeshRender::new_with_mesh_and_mat_res(ResTT::new_with_instance("outline_quad", m), outline_mat);
             r.quad_outline.write().unwrap().mesh_render = Some(mere);
         }
 
@@ -353,13 +353,13 @@ impl Render {
             //shader_manager.write().unwrap().request_use_no_proc("shader/all.sh");
             let all_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/fbo_all.mat");
 
-            let mere = mesh_render::MeshRenderer::new_with_mesh_and_mat_res(ResTT::new_with_instance("quad_all", m), all_mat);
+            let mere = mesh_render::MeshRender::new_with_mesh_and_mat_res(ResTT::new_with_instance("quad_all", m), all_mat);
             r.quad_all.write().unwrap().mesh_render = Some(mere);
         }
 
         {
             let m = mesh::Mesh::new();
-            let mere = mesh_render::MeshRenderer::new_with_mesh(
+            let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
                 "material/line.mat",
                 &*resource);
@@ -1169,7 +1169,7 @@ use camera2;
 struct RenderGroup<'a>
 {
     camera : (&'a transform::Transform, &'a camera2::Camera),
-    renderables : &'a Iterator<Item=(&'a transform::Transform, component::mesh_render::MeshRenderer)>,
+    renderables : &'a Iterator<Item=(&'a transform::Transform, component::mesh_render::MeshRender)>,
 }
 
 struct RenderByShader
@@ -1249,7 +1249,7 @@ impl NewRender
         &mut self,
         //mesh : &[component::mesh_render::MeshRenderer],
         //transform : &Iterator<Item=&transform::Transform>,
-        renderables : &Iterator<Item=(&transform::Transform, component::mesh_render::MeshRenderer)>,
+        renderables : &Iterator<Item=(&transform::Transform, component::mesh_render::MeshRender)>,
         loading : Arc<Mutex<usize>>
         ) -> bool
     {
