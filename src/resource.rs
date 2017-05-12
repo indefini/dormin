@@ -20,7 +20,7 @@ use std::sync::mpsc::channel;
 use std::thread;
 
 use std::rc::Rc;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::iter;
 use std::fmt;
 
@@ -43,30 +43,34 @@ pub struct ResTT<T>
     // can we remove name?
     pub name : String,
     #[serde(skip_serializing, skip_deserializing)]
-    pub resource : Option<usize>,
+    resource : Cell<Option<usize>>,
     #[serde(skip_serializing, skip_deserializing, default="return_none")]
     pub instance : Option<T>,
     #[serde(skip_serializing, skip_deserializing)]
     pub instance_managed : Option<usize>,
 }
 
-impl<T:Create+Send+Sync+'static> ResTT<T>
+impl<T> ResTT<T>
 {
     pub fn new(name : &str) -> ResTT<T>
     {
         ResTT {
             name : String::from(name),
-            resource : None,
+            resource : Cell::new(None),
             instance : None,
             instance_managed : None
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.resource.set(None);
     }
 
     pub fn new_with_instance(name : &str, r : T) -> ResTT<T>
     {
         ResTT {
             name : String::from(name),
-            resource : None,
+            resource : Cell::new(None),
             instance : Some(r),
             instance_managed : None
         }
@@ -76,15 +80,18 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
     {
         ResTT {
             name : String::from(name),
-            resource : Some(res),
+            resource : Cell::new(Some(res)),
             instance : None,
             instance_managed : None
         }
     }
+}
 
-    pub fn get_from_manager<'a>(&mut self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
+impl<T:Create+Send+Sync+'static> ResTT<T>
+{
+    pub fn get_from_manager<'a>(&self, rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
     {
-        if let Some(i) = self.resource {
+        if let Some(i) = self.resource.get() {
             rm.get_mut(i)
         }
         else {
@@ -98,7 +105,7 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
 
     pub fn get_from_manager_instant<'a> (&self, rm : &'a mut ResourceManager<T>) -> &'a mut T
     {
-        let i = if let Some(i) = self.resource {
+        let i = if let Some(i) = self.resource.get() {
             i
         }
         else {
@@ -118,7 +125,7 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         if self.instance.is_some() {
             self.instance.as_mut()
         }
-        else if let Some(i) = self.resource {
+        else if let Some(i) = self.resource.get() {
             rm.get_mut(i)
         }
         else {
@@ -140,11 +147,29 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         if self.instance.is_some() {
             self.instance.as_ref()
         }
-        else if let Some(i) = self.resource {
+        else if let Some(i) = self.resource.get() {
             manager.get_as_ref(i)
         }
         else {
             None
+        }
+    }
+
+    pub fn as_ref_instant<'a>(
+        &'a self,
+        manager : &'a mut ResourceManager<T>
+        ) -> Option<&'a T>
+    {
+        if self.instance.is_some() {
+            self.instance.as_ref()
+        }
+        else if let Some(i) = self.resource.get() {
+            Some(manager.get_ref_instant(i))
+        }
+        else {
+            let i = manager.request_use_no_proc_new(&self.name);
+            self.resource.set(Some(i));
+            Some(manager.get_ref_instant(i))
         }
     }
 
@@ -196,7 +221,7 @@ impl <T:'static+Create+Send+Sync+Clone> ResTT<T>
             self.instance.as_mut()
         }
         else {
-            if let Some(i) = self.resource {
+            if let Some(i) = self.resource.get() {
                 if let Some(r) = manager.get_as_ref(i) {
                     self.instance = Some((*r).clone());
                 }
@@ -209,7 +234,7 @@ impl <T:'static+Create+Send+Sync+Clone> ResTT<T>
     pub fn create_instance_with_manager(&mut self, manager : &ResourceManager<T>)
     {
         if self.instance.is_none() {
-            if let Some(i) = self.resource {
+            if let Some(i) = self.resource.get() {
                 if let Some(r) = manager.get_as_ref(i) {
                     self.instance = Some((*r).clone());
                 }
@@ -417,7 +442,7 @@ impl<T> State<T>
         }
     }
 
-    fn finalize2(&mut self) -> (bool, Option<T>)
+    fn finalize_with_wait(&mut self) -> (bool, Option<T>)
     {
         match *self {
             State::Loading(ref mut ojh, ref l) => {
@@ -839,7 +864,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
             return u;
         }
 
-        let (was_loading, op) = li.finalize2();
+        let (was_loading, op) = li.finalize_with_wait();
         if was_loading {
             if let Some(s) = op {
                 *li = State::Using(s);
@@ -856,6 +881,10 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
+    pub fn get_ref_instant(&mut self, index : usize) -> &T
+    {
+        self.get_mut_instant(index)
+    }
 
     pub fn get_as_ref(&self,index : usize) -> Option<&T>
     {
@@ -911,12 +940,12 @@ pub fn resource_get<'a, T:'static+Create+Send+Sync>(
     if res.instance.is_some() {
         res.instance.as_mut()
     }
-    else if let Some(i) = res.resource {
+    else if let Some(i) = res.resource.get() {
         manager.get_mut(i)
     }
     else {
         let (i, r) = manager.request_use_new(res.name.as_ref(), load);
-        res.resource = Some(i);
+        res.resource.set(Some(i));
         r
     }
 }
@@ -930,41 +959,15 @@ pub fn resource_get_ref<'a, T:'static+Create+Send+Sync>(
     if res.instance.is_some() {
         res.instance.as_ref()
     }
-    else if let Some(i) = res.resource {
+    else if let Some(i) = res.resource.get() {
         manager.get_ref(i)
     }
     else {
         let (i, r) = manager.get_or_load_ref_from_name(res.name.as_ref());
-        //TODO use Cell?
-        println!("TODO, should use cell, because we use the hashmap everytime here");
-        //res.resource = Some(i);
+        res.resource.set(Some(i));
         r
     }
 }
-
-pub fn resource_get_ref_with_mut<'a, T:'static+Create+Send+Sync>(
-    manager : &'a mut ResourceManager<T>,
-    res: &'a mut ResTT<T>,
-    )
-    -> Option<&'a T>
-{
-    if res.instance.is_some() {
-        println!("has instance, so ok : {}", res.name);
-        res.instance.as_ref()
-    }
-    else if let Some(i) = res.resource {
-        println!("has ref, so ok : {}", res.name);
-        manager.get_ref(i)
-    }
-    else {
-        println!("will load, : {}", res.name);
-        let (i, r) = manager.get_or_load_ref_from_name(res.name.as_ref());
-        //TODO use Cell?
-        res.resource = Some(i);
-        r
-    }
-}
-
 
 pub fn resource_get_mut<'a, T:'static+Create+Send+Sync>(
     manager : &'a mut ResourceManager<T>,
@@ -975,13 +978,12 @@ pub fn resource_get_mut<'a, T:'static+Create+Send+Sync>(
     if res.instance.is_some() {
         res.instance.as_mut()
     }
-    else if let Some(i) = res.resource {
+    else if let Some(i) = res.resource.get() {
         manager.get_mut(i)
     }
     else {
         let (i, r) = manager.get_or_load_mut_from_name(res.name.as_ref());
-        //TODO use Cell?
-        res.resource = Some(i);
+        res.resource.set(Some(i));
         r
     }
 }

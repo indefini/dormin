@@ -211,7 +211,7 @@ impl RenderPass
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
 
             let debug = mr.mesh.name.clone();
-            if let Some(m) = resource::resource_get_ref_with_mut(mesh_manager, &mut mr.mesh) {
+            if let Some(m) = resource::resource_get_ref(mesh_manager, &mr.mesh) {
                 init_mesh(m, shader)
             }
             else {
@@ -272,10 +272,8 @@ impl Render {
     pub fn new(factory: &factory::Factory,
                resource : Rc<resource::ResourceGroup>,
                camera : Rc<RefCell<camera::Camera>>,
-               //dragger : Arc<RwLock<object::Object>>,
                ) -> Render
     {
-        //let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc("fbo_all");
         let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_all");
         let fbo_selected = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_selected");
 
@@ -285,8 +283,6 @@ impl Render {
             cam.data.projection = camera::Projection::Orthographic;
             cam.pan(&vec::Vec3::new(0f64,0f64,50f64));
         }
-
-
 
         let r = Render { 
             passes : HashMap::new(),
@@ -308,7 +304,6 @@ impl Render {
             resource : resource.clone()
         };
 
-        let shader_manager = &resource.shader_manager;
         let material_manager = &resource.material_manager;
 
         {
@@ -318,8 +313,7 @@ impl Render {
 
             let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
-                "material/line.mat",
-                &*resource);
+                "material/line.mat");
             r.grid.write().unwrap().mesh_render = Some(mere);
         }
 
@@ -330,8 +324,7 @@ impl Render {
 
             let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
-                "material/line.mat",
-                &*resource);
+                "material/line.mat");
             r.camera_repere.write().unwrap().mesh_render = Some(mere);
         }
 
@@ -339,7 +332,6 @@ impl Render {
             let mut m = mesh::Mesh::new();
             m.add_quad(1f32, 1f32);
 
-            shader_manager.borrow_mut().request_use_no_proc_new("shader/outline.sh");
             let outline_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/outline.mat");
 
             let mere = mesh_render::MeshRender::new_with_mesh_and_mat_res(ResTT::new_with_instance("outline_quad", m), outline_mat);
@@ -350,7 +342,6 @@ impl Render {
             let mut m = mesh::Mesh::new();
             m.add_quad(1f32, 1f32);
 
-            //shader_manager.write().unwrap().request_use_no_proc("shader/all.sh");
             let all_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/fbo_all.mat");
 
             let mere = mesh_render::MeshRender::new_with_mesh_and_mat_res(ResTT::new_with_instance("quad_all", m), all_mat);
@@ -361,8 +352,7 @@ impl Render {
             let m = mesh::Mesh::new();
             let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
-                "material/line.mat",
-                &*resource);
+                "material/line.mat");
             r.line.write().unwrap().mesh_render = Some(mere);
         }
 

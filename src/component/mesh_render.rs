@@ -89,12 +89,12 @@ impl MeshRender{
     pub fn new_with_mesh(
         mesh : mesh::Mesh,
         material : &str,
-        resource : &resource::ResourceGroup) -> MeshRender
+        ) -> MeshRender
     {
         MeshRender {
             //TODO
             mesh : ResTT::new_with_instance("none", mesh),
-            material : resource.material_manager.borrow_mut().get_handle_instant(material),
+            material : ResTT::new(material),
         }
     }
 
@@ -105,6 +105,17 @@ impl MeshRender{
     {
         MeshRender {
             mesh : resource.mesh_manager.borrow_mut().get_handle_instant(mesh),
+            material : ResTT::new_with_instance("no_name", material),
+        }
+    }
+
+    pub fn new_with_mat2(
+        mesh : &str,
+        material : material::Material,
+        ) -> MeshRender
+    {
+        MeshRender {
+            mesh : resource::ResTT::new(mesh),
             material : ResTT::new_with_instance("no_name", material),
         }
     }

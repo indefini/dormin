@@ -444,7 +444,7 @@ impl<T> PropertyWrite for resource::ResTT<T> where T:Any
         match value.downcast_ref::<String>() {
             Some(v) => {
                 self.name = v.clone();
-                self.resource = None
+                self.reset();
             }
             None => {}
         }
