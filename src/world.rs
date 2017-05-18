@@ -893,3 +893,8 @@ pub struct WorldRefDataMut<'a> {
     pub data : &'a mut Data
 }
 
+
+pub trait Creator<O> {
+    fn create_object(&self, name : &str) -> O;
+}
+

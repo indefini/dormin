@@ -106,3 +106,11 @@ impl Factory {
 
 }
 
+use world;
+impl world::Creator<object::Object> for Factory {
+    fn create_object(&self, name : &str) -> object::Object
+    {
+        self.create_object(name)
+    }
+}
+

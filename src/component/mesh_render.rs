@@ -14,6 +14,10 @@ use material;
 use property::{PropertyRead, PropertyGet, PropertyWrite, WriteValue};
 use std::any::Any;
 
+pub trait MeshRenderSet {
+    fn set_mesh_render(&mut self, mr : MeshRender);
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MeshRender
 {

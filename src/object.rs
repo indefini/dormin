@@ -986,3 +986,11 @@ fn debug_lua(lua : &mut lua::State)
     }
     println!("");
 }
+
+impl mesh_render::MeshRenderSet for Object {
+    fn set_mesh_render(&mut self, mr : mesh_render::MeshRender)
+    {
+        self.mesh_render = Some(mr);
+    }
+}
+
