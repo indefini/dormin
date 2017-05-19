@@ -64,6 +64,23 @@ pub extern fn resize_cb(r : *mut Render, w : c_int, h : c_int) -> () {
 }
 */
 
+pub struct MatrixMeshRender
+{
+    mat : matrix::Matrix4,
+    mr : mesh_render::MeshRender
+}
+
+impl MatrixMeshRender {
+    pub fn new(mat : matrix::Matrix4, mr : mesh_render::MeshRender) -> MatrixMeshRender
+    {
+        MatrixMeshRender {
+        mat : mat,
+        mr : mr
+        }
+    }
+
+}
+
 struct CameraPass
 {
     camera : Rc<RefCell<camera::Camera>>,
@@ -71,6 +88,7 @@ struct CameraPass
     // we need : transform = worldmatrix, mesh_render = mesh + material, 
     // mesh and material can be instances...
     objects : Vec<Arc<RwLock<object::Object>>>,
+    mmr : Vec<MatrixMeshRender>,
 
     /*
     transform : Vec<usize>,
@@ -85,13 +103,19 @@ impl CameraPass
     {
         CameraPass {
             camera : camera,
-            objects : Vec::new()
+            objects : Vec::new(),
+            mmr : Vec::new()
         }
     }
 
     fn add_object(&mut self, o : Arc<RwLock<object::Object>>)
     {
         self.objects.push(o);
+    }
+
+    fn add_mmr(&mut self, mr : MatrixMeshRender)
+    {
+        self.mmr.push(mr);
     }
 }
 
@@ -730,6 +754,65 @@ impl Render {
     }
 }
 
+fn get_pass_from_mesh_render<'a>(
+    mr : &mut mesh_render::MeshRender,
+    passes : &'a mut HashMap<String, Box<RenderPass>>, 
+    material_manager : &mut resource::ResourceManager<material::Material>,
+    shader_manager : &mut resource::ResourceManager<shader::Shader>,
+    camera : Rc<RefCell<camera::Camera>>,
+    load : Arc<Mutex<usize>>
+    ) -> Option<&'a mut CameraPass>
+{
+        let mat = &mut mr.material;
+
+        let matname = mat.name.clone();
+        let mmm = if let Some(m) = resource::resource_get_mut(material_manager, mat) {
+            &mut m.shader
+        }
+        else {
+            return None
+        };
+
+        let mut shader_yep = match *mmm {
+            Some(ref mut s) => s,
+            None =>  {
+                println!("material problem, return, {}", matname);
+                return None
+            }
+        };
+
+        let shader_copy = shader_yep.clone();
+        let shadername = shader_yep.name.clone();
+        let shader = match shader_yep.get_resource(shader_manager, load) {
+        //let shader = match shader_yep.get_no_load(shader_manager) {
+            Some(s) => s,
+            None => {
+                println!("shader problem, return, {}", shadername);
+                return None
+            }
+        };
+
+        {
+            let key = shader.name.clone();
+            let rp = match passes.entry(key) {
+                Vacant(entry) => 
+                    entry.insert(box RenderPass::new(shader_copy)),
+                Occupied(entry) => entry.into_mut(),
+            };
+
+            let key_cam = camera.borrow().id.clone();
+            let cam_pass = match rp.passes.entry(key_cam) {
+                Vacant(entry) => 
+                    entry.insert(box CameraPass::new(camera.clone())),
+                Occupied(entry) => entry.into_mut(),
+            };
+            
+            //cam_pass.add_rmm(o.clone());
+            Some(cam_pass)
+        }
+
+}
+
 fn prepare_passes_object(
     o : Arc<RwLock<object::Object>>,
     passes : &mut HashMap<String, Box<RenderPass>>, 
@@ -756,9 +839,16 @@ fn prepare_passes_object(
         let name = occ.name.clone();
         let render = &mut occ.mesh_render;
 
-        let mat = match *render {
-            Some(ref mut mr) => { 
-                &mut mr.material
+        let pass = match *render {
+            Some(ref mut mr) => {
+                get_pass_from_mesh_render(
+                    mr,
+                    passes,
+                    material_manager,
+                    shader_manager,
+                    camera,
+                    load
+                    )
             },
             None => {
                 println!("{}, no mesh render, return", name);
@@ -766,48 +856,7 @@ fn prepare_passes_object(
             }
         };
 
-        let matname = mat.name.clone();
-        let mmm = if let Some(m) = resource::resource_get_mut(material_manager, mat) {
-            &mut m.shader
-        }
-        else {
-            return
-        };
-
-        let mut shader_yep = match *mmm {
-            Some(ref mut s) => s,
-            None =>  {
-                println!("{}, material problem, return, {}", name, matname);
-                return
-            }
-        };
-
-        let shader_copy = shader_yep.clone();
-        let shadername = shader_yep.name.clone();
-        let shader = match shader_yep.get_resource(shader_manager, load) {
-        //let shader = match shader_yep.get_no_load(shader_manager) {
-            Some(s) => s,
-            None => {
-                println!("{}, shader problem, return, {}", name, shadername);
-                return
-            }
-        };
-
-        {
-            let key = shader.name.clone();
-            let rp = match passes.entry(key) {
-                Vacant(entry) => 
-                    entry.insert(box RenderPass::new(shader_copy)),
-                Occupied(entry) => entry.into_mut(),
-            };
-
-            let key_cam = camera.borrow().id.clone();
-            let cam_pass = match rp.passes.entry(key_cam) {
-                Vacant(entry) => 
-                    entry.insert(box CameraPass::new(camera.clone())),
-                Occupied(entry) => entry.into_mut(),
-            };
-
+        if let Some(cam_pass) = pass {
             cam_pass.add_object(o.clone());
         }
 
