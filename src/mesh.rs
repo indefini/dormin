@@ -5,6 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
 use std::io::Read;
 use std::cell::Cell;
+use std::fmt;
 
 //use libc::{c_char, c_int, c_uint, c_void};
 use libc::{c_uint, c_void};
@@ -807,4 +808,13 @@ static VERTEX_DATA: [f32, ..6] = [
       ];
       */
 
+
+impl fmt::Debug for Mesh
+{
+    fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result
+    {
+        write!(fmt, "I am a mesh:{}", self.name)
+    }
+
+}
 

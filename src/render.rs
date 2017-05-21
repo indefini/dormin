@@ -63,7 +63,7 @@ pub extern fn resize_cb(r : *mut Render, w : c_int, h : c_int) -> () {
     }
 }
 */
-
+#[derive(Clone, Debug)]
 pub struct MatrixMeshRender
 {
     mat : matrix::Matrix4,
@@ -182,6 +182,19 @@ impl RenderPass
 
                 not_loaded += not;
             }
+
+            for m in p.mmr.iter() {
+                let not = self.draw_mmr(
+                    shader,
+                    &m.mat,
+                    &m.mr,
+                    &matrix,
+                    resource,
+                    load.clone()
+                    );
+
+                not_loaded += not;
+            }
         }
 
         not_loaded
@@ -213,24 +226,44 @@ impl RenderPass
         load : Arc<Mutex<usize>>
         ) -> usize
     {
-        let mut not_loaded = 0;
 
         if ob.mesh_render.is_none() {
             println!("return no mesh_render : {}", ob.name);
-            return not_loaded;
+            return 0usize;
         }
 
-        let init_material = |mr : &mut mesh_render::MeshRender| -> usize
+        self.draw_mmr(shader,
+                      &ob.get_world_matrix(), 
+                      ob.mesh_render.as_ref().unwrap(),
+                      matrix,
+                      resource,
+                      load)
+
+    }
+
+    fn draw_mmr(
+        &self,
+        shader : &shader::Shader,
+        world_matrix : &matrix::Matrix4,
+        mesh_render : &mesh_render::MeshRender,
+        matrix : &matrix::Matrix4,
+        resource : &resource::ResourceGroup,
+        load : Arc<Mutex<usize>>
+        ) -> usize
+    {
+        let mut not_loaded = 0;
+
+        let init_material = |mr : &mesh_render::MeshRender| -> usize
         {
             let material_manager = &mut *resource.material_manager.borrow_mut();
-            let m = mr.material.get(material_manager).unwrap();
+            let m = mr.material.get_ref(material_manager).unwrap();
 
             object_init_mat(m, shader, resource, load)
         };
 
-        not_loaded = init_material(ob.mesh_render.as_mut().unwrap());
+        not_loaded = init_material(mesh_render);
 
-        let init_mesh_render = |mr : &mut mesh_render::MeshRender|  -> (bool, usize)
+        let init_mesh_render = |mr : &mesh_render::MeshRender|  -> (bool, usize)
         {
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
 
@@ -243,22 +276,20 @@ impl RenderPass
             }
         };
 
-        let (can_render, vertex_data_count) = init_mesh_render(ob.mesh_render.as_mut().unwrap());
+        let (can_render, vertex_data_count) = init_mesh_render(mesh_render);
 
         if can_render {
-
-            let object_mat = ob.get_world_matrix();
-            let object_mat_world = matrix * &object_mat ;
+            let object_mat_world = matrix * world_matrix ;
             shader.uniform_set("matrix", &object_mat_world);
 
-            let draw_mesh = |mr : &mut mesh_render::MeshRender|
+            let draw_mesh = |mr : &mesh_render::MeshRender|
             {
                 let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
-                let m = mr.mesh.get(mesh_manager).unwrap();
+                let m = mr.mesh.get_ref(mesh_manager).unwrap();
                 object_draw_mesh(m, vertex_data_count);
             };
 
-            draw_mesh(ob.mesh_render.as_mut().unwrap());
+            draw_mesh(mesh_render);
         }
 
         return not_loaded;
@@ -563,12 +594,46 @@ impl Render {
         }
     }
 
+    fn prepare_passes_objects_per_mmr(
+        &mut self,
+        mmr : &[MatrixMeshRender])
+    {
+        let load = Arc::new(Mutex::new(0));
+        for (_,p) in self.passes.iter_mut()
+        {
+            p.passes.clear();
+        }
+
+            println!("COUNT ::::::::::: {}", mmr.len());
+
+        for m in mmr {
+            println!("MRMRMRMRMR");
+            println!("MRMRMRMRMR");
+            let pass = get_pass_from_mesh_render(
+                &m.mr,
+                &mut self.passes,
+                &mut self.resource.material_manager.borrow_mut(),
+                &mut self.resource.shader_manager.borrow_mut(),
+                self.camera.clone(),
+                load.clone()
+                );
+
+            if let Some(cam_pass) = pass {
+                cam_pass.add_mmr(m.clone());
+            }
+            else {
+                println!("NOPASSSSSSSSSSSSSSSSS");
+            }
+        }
+    }
+
     pub fn draw(
         &mut self,
         objects : &[Arc<RwLock<object::Object>>],
         cameras: &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
         draggers : &[Arc<RwLock<object::Object>>],
+        draggers2 : &[MatrixMeshRender],
         on_finish : &Fn(bool),
         load : Arc<Mutex<usize>>
         ) -> usize
@@ -694,7 +759,8 @@ impl Render {
             unsafe { cgl_clear(); }
             //ld.push_back(self.dragger.clone());
             //self.prepare_passes_objects_per(ld);
-            self.prepare_passes_objects_per(draggers);
+            //self.prepare_passes_objects_per(draggers);
+            self.prepare_passes_objects_per_mmr(draggers2);
 
 
             /*
@@ -755,7 +821,7 @@ impl Render {
 }
 
 fn get_pass_from_mesh_render<'a>(
-    mr : &mut mesh_render::MeshRender,
+    mr : &mesh_render::MeshRender,
     passes : &'a mut HashMap<String, Box<RenderPass>>, 
     material_manager : &mut resource::ResourceManager<material::Material>,
     shader_manager : &mut resource::ResourceManager<shader::Shader>,
@@ -763,18 +829,18 @@ fn get_pass_from_mesh_render<'a>(
     load : Arc<Mutex<usize>>
     ) -> Option<&'a mut CameraPass>
 {
-        let mat = &mut mr.material;
+        let mat = &mr.material;
 
         let matname = mat.name.clone();
-        let mmm = if let Some(m) = resource::resource_get_mut(material_manager, mat) {
-            &mut m.shader
+        let mmm = if let Some(m) = resource::resource_get_ref(material_manager, mat) {
+            &m.shader
         }
         else {
             return None
         };
 
-        let mut shader_yep = match *mmm {
-            Some(ref mut s) => s,
+        let shader_yep = match *mmm {
+            Some(ref s) => s,
             None =>  {
                 println!("material problem, return, {}", matname);
                 return None
@@ -783,7 +849,7 @@ fn get_pass_from_mesh_render<'a>(
 
         let shader_copy = shader_yep.clone();
         let shadername = shader_yep.name.clone();
-        let shader = match shader_yep.get_resource(shader_manager, load) {
+        let shader = match shader_yep.get_or_load_ref(shader_manager) {
         //let shader = match shader_yep.get_no_load(shader_manager) {
             Some(s) => s,
             None => {
@@ -837,10 +903,10 @@ fn prepare_passes_object(
         let oc = o.clone();
         let mut occ = oc.write().unwrap();
         let name = occ.name.clone();
-        let render = &mut occ.mesh_render;
+        let render = &occ.mesh_render;
 
         let pass = match *render {
-            Some(ref mut mr) => {
+            Some(ref mr) => {
                 get_pass_from_mesh_render(
                     mr,
                     passes,
@@ -858,6 +924,9 @@ fn prepare_passes_object(
 
         if let Some(cam_pass) = pass {
             cam_pass.add_object(o.clone());
+        }
+        else {
+            println!("NO PASS OBJJJJJJJJJJJJ");
         }
 
     }
@@ -1082,7 +1151,7 @@ fn send_shader_uniforms(
 
 
 fn object_init_mat(
-        material : &mut material::Material,
+        material : &material::Material,
         shader : &shader::Shader,
         resource : &resource::ResourceGroup,
         load : Arc<Mutex<usize>>
@@ -1091,11 +1160,11 @@ fn object_init_mat(
     let mut not_loaded = 0;
 
     let mut i = 0u32;
-    for (name,t) in material.textures.iter_mut() {
+    for (name,t) in material.textures.iter() {
         match *t {
-            material::Sampler::ImageFile(ref mut img) => {
+            material::Sampler::ImageFile(ref img) => {
                 let texture_manager = &mut *resource.texture_manager.borrow_mut();
-                let r = resource::resource_get(texture_manager, img, load.clone());
+                let r = resource::resource_get_mut_no_instance(texture_manager, img, load.clone());
                 match r {
                     Some(tex) => {
                         tex.init();
@@ -1109,7 +1178,7 @@ fn object_init_mat(
                     }
                 }
             },
-            material::Sampler::Fbo(ref mut fbo, ref attachment) => {
+            material::Sampler::Fbo(ref fbo, ref attachment) => {
                 let mut rm = resource.fbo_manager.borrow_mut();
                 let yoyo = rm.get_or_create(fbo.name.as_str());
                 let fbosamp = uniform::FboSampler { 

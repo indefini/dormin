@@ -95,14 +95,14 @@ impl Component for ArmatureAnimation
         }
 
         let armature_manager = &mut *resource.armature_manager.borrow_mut();
-        let arm_base = self.armature.as_ref(armature_manager).unwrap();
+        let arm_base = self.armature.get_ref(armature_manager).unwrap();
 
         self.arm_instance.set_pose(arm_base, action.as_str(), self.time);
 
         let base_mesh = mr.get_mesh();
         //let base = base_mesh.read().unwrap();
         let mm = &mut *resource.mesh_manager.borrow_mut();
-        let base = base_mesh.as_ref(mm).unwrap();
+        let base = base_mesh.get_ref(mm).unwrap();
         let mut mi = mr.get_or_create_mesh_instance();
         update_mesh_with_armature(&base, mi, &self.arm_instance);
 
@@ -133,7 +133,7 @@ pub fn new(ob : &Object, resource : &resource::ResourceGroup) -> Box<Components>
     let armature_manager = &mut *resource.armature_manager.borrow_mut();
     let armature = armature_manager.request_use_no_proc_tt(arm.name.as_ref());
     let instance = {
-        let arm_base = armature.as_ref(armature_manager).unwrap();
+        let arm_base = armature.get_ref(armature_manager).unwrap();
         arm_base.create_instance()
     };
 

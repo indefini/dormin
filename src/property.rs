@@ -424,7 +424,7 @@ impl<T:PropertyGet> PropertyGet for Arc<RwLock<T>>
 
 
 
-impl<T> PropertyWrite for resource::ResTT<T> where T:Any
+impl<T> PropertyWrite for resource::ResTT<T> where T:Any+Clone
 {
     fn test_set_property(&mut self, value: &Any)
     {

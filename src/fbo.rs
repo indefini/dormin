@@ -1,4 +1,5 @@
 use libc::{c_uint, c_int};
+use std::fmt;
 
 #[repr(C)]
 pub struct CglFbo;
@@ -15,7 +16,7 @@ extern {
     pub fn cgl_fbo_destroy(fbo : *const CglFbo);
 }
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub enum Attachment
 {
     Depth,
@@ -73,3 +74,12 @@ impl Fbo
         unsafe { cgl_fbo_use_end(); }
     }
 }
+
+impl fmt::Debug for Fbo
+{
+    fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result
+    {
+        write!(fmt, "I am a fbo:{}", self.name)
+    }
+}
+

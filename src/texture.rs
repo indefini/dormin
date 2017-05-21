@@ -3,6 +3,7 @@ use libc::{c_uint, c_void};
 use std::mem;
 use std::path::Path;
 use std::cell::Cell;
+use std::fmt;
 
 #[repr(C)]
 pub struct CglTexture;
@@ -113,6 +114,14 @@ impl Texture
         if self.state.get() == 2 {
             self.image = None;
         }
+    }
+}
+
+impl fmt::Debug for Texture
+{
+    fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result
+    {
+        write!(fmt, "I am a texture:{}", self.name)
     }
 }
 

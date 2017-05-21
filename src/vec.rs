@@ -432,6 +432,13 @@ impl Quat
 
 }
 
+impl fmt::Debug for Vec2
+{
+    fn fmt(&self, fmt :&mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "({}, {})", self.x, self.y)
+    }
+}
+
 impl fmt::Debug for Vec3
 {
     fn fmt(&self, fmt :&mut fmt::Formatter) -> fmt::Result {

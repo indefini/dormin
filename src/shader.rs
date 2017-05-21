@@ -7,6 +7,7 @@ use std::str::FromStr;
 use std::ffi::CString;
 use std::path::Path;
 use std::mem;
+use std::fmt;
 //use std::default::Default;
 //use toml;
 
@@ -291,7 +292,7 @@ impl Shader
 }
 
 
-#[derive(Clone,Serialize, Deserialize)]
+#[derive(Clone,Serialize, Deserialize, Debug)]
 pub enum UniformData
 {
     Int(i32),
@@ -359,5 +360,13 @@ extern {
         cb : ShaderUniformAddFn,
         data : *const c_void);
 
+}
+
+impl fmt::Debug for Shader
+{
+    fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result
+    {
+        write!(fmt, "I am a shader:{}", self.name)
+    }
 }
 

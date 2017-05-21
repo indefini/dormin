@@ -118,7 +118,7 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         rm.get_mut_instant(i)
     }
 
-    pub fn get<'a>(
+    pub fn get_mut<'a>(
         &'a mut self,
         rm : &'a mut ResourceManager<T>) -> Option<&'a mut T>
     {
@@ -139,7 +139,12 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         resource_get(manager, self, load)
     }
 
-    pub fn as_ref<'a>(
+    pub fn get_or_load_ref<'a>(&'a self, manager : &'a mut ResourceManager<T>) -> Option<&'a T>
+    {
+        resource_get_ref(manager, self)
+    }
+
+    pub fn get_ref<'a>(
         &'a self,
         manager : &'a ResourceManager<T>
         ) -> Option<&'a T>
@@ -196,19 +201,48 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
 
 }
 
-impl<T> Clone for ResTT<T>
+use core;
+
+pub trait Clonable {
+    fn make_clone(&self) -> Option<Self> where Self: core::marker::Sized
+    {
+        None
+    }
+}
+
+impl<T:Clone> Clonable for T {
+    fn make_clone(&self) -> Option<T>
+    {
+        Some(self.clone())
+    }
+}
+
+impl Clonable for texture::Texture {}
+impl Clonable for fbo::Fbo {}
+impl Clonable for shader::Shader {}
+
+
+//impl<T> Clone for ResTT<T>
+impl<T:Clonable> Clone for ResTT<T>
 {
     fn clone(&self) -> ResTT<T>
     {
         //println!("WARNING : clone for resource is TODO, because of instance");
+        let instance = match self.instance {
+            Some(ref i) => i.make_clone(),
+            None => None
+        };
+
         ResTT {
             name : self.name.clone(),
             resource : self.resource.clone(),
-            instance : None, //TODO
+            //instance : None, //TODO
+            instance : instance,
             instance_managed : None //TODO
         }
     }
 }
+
 
 impl <T:'static+Create+Send+Sync+Clone> ResTT<T>
 {
@@ -247,19 +281,19 @@ impl <T:'static+Create+Send+Sync+Clone> ResTT<T>
     }
 }
 
-impl<T> fmt::Debug for ResTT<T>
+impl<T:fmt::Debug> fmt::Debug for ResTT<T>
 {
     fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result
     {
         let s = if self.instance.is_none() {
-            "no instance"
+            "no instance".to_owned()
         }
         else {
-            "there is an instance"
+            format!("there is an instance: {:?}", self.instance)
         };
 
 
-        write!(fmt, "{} : resource : {:?} and {}", self.name, self.resource, s)
+        write!(fmt, "ResTT Name :{} : resource :{:?} and {}", self.name, self.resource, s)
     }
 
 }
@@ -798,6 +832,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
+    //TODO put to private
     pub fn get_mut_or_panic(&mut self,index : usize) -> &mut T
     {
         match self.loaded[index] {
@@ -810,7 +845,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn get_mut(&mut self, index : usize) -> Option<&mut T>
+    fn get_mut(&mut self, index : usize) -> Option<&mut T>
     {
         let li = &mut self.loaded[index];
 
@@ -833,7 +868,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn get_ref(&mut self, index : usize) -> Option<& T>
+    fn get_ref(&mut self, index : usize) -> Option<& T>
     {
         let li = &mut self.loaded[index];
 
@@ -856,7 +891,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn get_mut_instant(&mut self, index : usize) -> &mut T
+    fn get_mut_instant(&mut self, index : usize) -> &mut T
     {
         let li = &mut self.loaded[index];
 
@@ -881,12 +916,12 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn get_ref_instant(&mut self, index : usize) -> &T
+    fn get_ref_instant(&mut self, index : usize) -> &T
     {
         self.get_mut_instant(index)
     }
 
-    pub fn get_as_ref(&self,index : usize) -> Option<&T>
+    fn get_as_ref(&self,index : usize) -> Option<&T>
     {
         match self.loaded[index] {
             State::Loading(_,_) => {
@@ -949,6 +984,24 @@ pub fn resource_get<'a, T:'static+Create+Send+Sync>(
         r
     }
 }
+
+pub fn resource_get_mut_no_instance<'a, T:'static+Create+Send+Sync>(
+    manager : &'a mut ResourceManager<T>,
+    res: &'a ResTT<T>,
+    load : Arc<Mutex<usize>>
+    )
+    -> Option<&'a mut T>
+{
+    if let Some(i) = res.resource.get() {
+        manager.get_mut(i)
+    }
+    else {
+        let (i, r) = manager.request_use_new(res.name.as_ref(), load);
+        res.resource.set(Some(i));
+        r
+    }
+}
+
 
 pub fn resource_get_ref<'a, T:'static+Create+Send+Sync>(
     manager : &'a mut ResourceManager<T>,

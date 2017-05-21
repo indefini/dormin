@@ -18,7 +18,7 @@ pub trait MeshRenderSet {
     fn set_mesh_render(&mut self, mr : MeshRender);
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct MeshRender
 {
     pub mesh : ResTT<mesh::Mesh>,
@@ -109,7 +109,7 @@ impl MeshRender{
     {
         MeshRender {
             mesh : resource.mesh_manager.borrow_mut().get_handle_instant(mesh),
-            material : ResTT::new_with_instance("no_name", material),
+            material : ResTT::new_with_instance("no_name0", material),
         }
     }
 
@@ -120,7 +120,7 @@ impl MeshRender{
     {
         MeshRender {
             mesh : resource::ResTT::new(mesh),
-            material : ResTT::new_with_instance("no_name", material),
+            material : ResTT::new_with_instance("no_name2", material),
         }
     }
 

@@ -19,7 +19,7 @@ use texture;
 use fbo;
 use self::Sampler::{ImageFile,Fbo};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Sampler
 {
     ImageFile(resource::ResTT<texture::Texture>),
@@ -41,7 +41,7 @@ impl Sampler
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Material
 {
     pub name : String,
