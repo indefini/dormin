@@ -604,11 +604,7 @@ impl Render {
             p.passes.clear();
         }
 
-            println!("COUNT ::::::::::: {}", mmr.len());
-
         for m in mmr {
-            println!("MRMRMRMRMR");
-            println!("MRMRMRMRMR");
             let pass = get_pass_from_mesh_render(
                 &m.mr,
                 &mut self.passes,
@@ -620,9 +616,6 @@ impl Render {
 
             if let Some(cam_pass) = pass {
                 cam_pass.add_mmr(m.clone());
-            }
-            else {
-                println!("NOPASSSSSSSSSSSSSSSSS");
             }
         }
     }

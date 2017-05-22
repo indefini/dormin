@@ -156,7 +156,14 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
             manager.get_as_ref(i)
         }
         else {
-            None
+            let o = manager.get_ref_from_name(self.name.as_ref());
+            match o {
+                Some((i, r)) => {
+                    self.resource.set(Some(i));
+                    Some(r)
+                },
+                None => None
+            }
         }
     }
 
@@ -600,13 +607,13 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn get_ref_from_name(&self, name : &str) -> Option<&T>
+    fn get_ref_from_name(&self, name : &str) -> Option<(usize,&T)>
     {
         match self.get_res_state(name) {
             Test::Other(i) => {
                 let li = &self.loaded[i];
                 match *li {
-                    State::Using(ref u) => Some(u),
+                    State::Using(ref u) => Some((i,u)),
                     _ => None
                 }
             },

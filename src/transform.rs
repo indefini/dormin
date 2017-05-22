@@ -105,6 +105,16 @@ impl Orientation
                 *self = Orientation::Quat(ori.get_quat())
         }
     }
+
+    pub fn set_with_quat(&mut self, ori : vec::Quat)
+    {
+        match *self {
+            Orientation::AngleXYZ(_) => 
+                *self = Orientation::AngleXYZ(ori.to_euler_deg()),
+            Orientation::Quat(_) => 
+                *self = Orientation::Quat(ori)
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
