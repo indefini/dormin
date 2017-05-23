@@ -80,23 +80,6 @@ impl MatrixMeshRender {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct TransformMeshRender
-{
-    pub transform : transform::Transform,
-    pub mesh_render : mesh_render::MeshRender
-}
-
-impl TransformMeshRender {
-    pub fn new(t : transform::Transform, mr : mesh_render::MeshRender) -> TransformMeshRender
-    {
-        TransformMeshRender {
-        transform : t,
-        mesh_render : mr
-        }
-    }
-}
-
 struct CameraPass
 {
     camera : Rc<RefCell<camera::Camera>>,
