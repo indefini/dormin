@@ -78,7 +78,23 @@ impl MatrixMeshRender {
         mr : mr
         }
     }
+}
 
+#[derive(Clone, Debug)]
+pub struct TransformMeshRender
+{
+    pub transform : transform::Transform,
+    pub mesh_render : mesh_render::MeshRender
+}
+
+impl TransformMeshRender {
+    pub fn new(t : transform::Transform, mr : mesh_render::MeshRender) -> TransformMeshRender
+    {
+        TransformMeshRender {
+        transform : t,
+        mesh_render : mr
+        }
+    }
 }
 
 struct CameraPass
@@ -625,7 +641,6 @@ impl Render {
         objects : &[Arc<RwLock<object::Object>>],
         cameras: &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
-        draggers : &[Arc<RwLock<object::Object>>],
         draggers2 : &[MatrixMeshRender],
         on_finish : &Fn(bool),
         load : Arc<Mutex<usize>>

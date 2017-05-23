@@ -135,7 +135,7 @@ impl Transform
         Transform {
             position : vec::Vec3::zero(),
             orientation : Orientation::Quat(vec::Quat::identity()),
-            scale : vec::Vec3::zero(),
+            scale : vec::Vec3::one(),
             dirty : false,
             local_matrix : matrix::Matrix4::identity()
         }
