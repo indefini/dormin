@@ -82,7 +82,7 @@ impl MatrixMeshRender {
 
 struct CameraPass
 {
-    camera : Rc<RefCell<camera::Camera>>,
+    matrix : matrix::Matrix4,
     //TODO remove objects from here
     // we need : transform = worldmatrix, mesh_render = mesh + material, 
     // mesh and material can be instances...
@@ -98,10 +98,10 @@ struct CameraPass
 
 impl CameraPass
 {
-    fn new(camera : Rc<RefCell<camera::Camera>>) -> CameraPass
+    fn new(mat : matrix::Matrix4) -> CameraPass
     {
         CameraPass {
-            camera : camera,
+            matrix : mat,
             objects : Vec::new(),
             mmr : Vec::new()
         }
@@ -163,18 +163,13 @@ impl RenderPass
         let mut not_loaded = 0;
 
         for (_,p) in self.passes.iter() {
-            let cam_mat_borrow = p.camera.borrow();
-            let cam_mat = cam_mat_borrow.object.read().unwrap().get_world_matrix();
-            let cam_projection = p.camera.borrow().get_perspective();
-            let cam_mat_inv = cam_mat.get_inverse();
-            let matrix = &cam_projection * &cam_mat_inv;
 
             for o in p.objects.iter() {
                 let mut ob = o.write().unwrap();
                 let not = self.draw_object(
                     shader,
                     &mut *ob,
-                    &matrix, 
+                    &p.matrix,
                     resource,
                     load.clone()
                     );
@@ -187,7 +182,7 @@ impl RenderPass
                     shader,
                     &m.mat,
                     &m.mr,
-                    &matrix,
+                    &p.matrix,
                     resource,
                     load.clone()
                     );
@@ -301,7 +296,6 @@ pub struct Render
 
     resource : Rc<resource::ResourceGroup>,
 
-    camera : Rc<RefCell<camera::Camera>>,
     camera_ortho : Rc<RefCell<camera::Camera>>,
 
     //fbo_all : Arc<RwLock<fbo::Fbo>>,
@@ -325,7 +319,6 @@ impl Render {
     //TODO remove dragger and put "view_objects"
     pub fn new(factory: &factory::Factory,
                resource : Rc<resource::ResourceGroup>,
-               camera : Rc<RefCell<camera::Camera>>,
                ) -> Render
     {
         let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_all");
@@ -340,7 +333,6 @@ impl Render {
 
         let r = Render { 
             passes : HashMap::new(),
-            camera : camera,
             camera_ortho : camera_ortho,
             fbo_all : fbo_all,
             fbo_selected : fbo_selected,
@@ -436,9 +428,6 @@ impl Render {
             self.quad_all.write().unwrap().scale = 
                 vec::Vec3::new(w as f64, h as f64, 1f64);
 
-            let mut cam = self.camera.borrow_mut();
-            cam.set_resolution(w, h);
-
             let mut cam_ortho = self.camera_ortho.borrow_mut();
             cam_ortho.set_resolution(w, h);
 
@@ -492,7 +481,11 @@ impl Render {
     }
 
 
-    fn add_objects_to_passes(&mut self, objects : &[Arc<RwLock<object::Object>>])
+    fn add_objects_to_passes(
+        &mut self,
+        camera : &camera::Camera,
+        objects : &[Arc<RwLock<object::Object>>]
+        )
     {
         for o in objects.iter() {
             prepare_passes_object(
@@ -500,7 +493,7 @@ impl Render {
                 &mut self.passes,
                 &mut self.resource.material_manager.borrow_mut(),
                 &mut self.resource.shader_manager.borrow_mut(),
-                self.camera.clone());
+                camera);
             
             let ob =  &*o.read().unwrap();
             match ob.get_component::<armature_animation::ArmatureAnimation>() {
@@ -536,6 +529,7 @@ impl Render {
 
     fn prepare_passes_selected(
         &mut self,
+        camera : &camera::Camera,
         objects : &[Arc<RwLock<object::Object>>])
     {
         for (_,p) in self.passes.iter_mut()
@@ -553,7 +547,7 @@ impl Render {
                 &mut self.passes,
                 &mut self.resource.material_manager.borrow_mut(),
                 &mut self.resource.shader_manager.borrow_mut(),
-                self.camera.clone());
+                camera);
         }
     }
 
@@ -571,11 +565,15 @@ impl Render {
                 &mut self.passes,
                 &mut self.resource.material_manager.borrow_mut(),
                 &mut self.resource.shader_manager.borrow_mut(),
-                self.camera_ortho.clone());
+                &*self.camera_ortho.borrow());
         }
     }
 
-    fn prepare_passes_objects_per(&mut self, list : &[Arc<RwLock<object::Object>>])
+    fn prepare_passes_objects_per(
+        &mut self,
+        camera : camera::Camera,
+        list : &[Arc<RwLock<object::Object>>]
+        )
     {
         for (_,p) in self.passes.iter_mut()
         {
@@ -589,12 +587,13 @@ impl Render {
                 &mut self.passes,
                 &mut self.resource.material_manager.borrow_mut(),
                 &mut self.resource.shader_manager.borrow_mut(),
-                self.camera.clone());
+                &camera);
         }
     }
 
     fn prepare_passes_objects_per_mmr(
         &mut self,
+        camera : &camera::Camera,
         mmr : &[MatrixMeshRender])
     {
         let load = Arc::new(Mutex::new(0));
@@ -609,7 +608,7 @@ impl Render {
                 &mut self.passes,
                 &mut self.resource.material_manager.borrow_mut(),
                 &mut self.resource.shader_manager.borrow_mut(),
-                self.camera.clone(),
+                camera,
                 load.clone()
                 );
 
@@ -621,6 +620,7 @@ impl Render {
 
     pub fn draw(
         &mut self,
+        camera : &camera::Camera,
         objects : &[Arc<RwLock<object::Object>>],
         cameras: &[Arc<RwLock<object::Object>>],
         selected : &[Arc<RwLock<object::Object>>],
@@ -630,7 +630,7 @@ impl Render {
         ) -> usize
     {
         let mut not_loaded = 0;
-        self.prepare_passes_selected(selected);
+        self.prepare_passes_selected(camera, selected);
         //self.fbo_selected.read().unwrap().cgl_use();
         {
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
@@ -649,8 +649,8 @@ impl Render {
         fbo::Fbo::cgl_use_end();
 
         self.clean_passes();
-        self.add_objects_to_passes(objects);
-        self.add_objects_to_passes(cameras);
+        self.add_objects_to_passes(camera, objects);
+        self.add_objects_to_passes(camera, cameras);
 
         {
         prepare_passes_object(
@@ -658,7 +658,7 @@ impl Render {
             &mut self.passes,
             &mut self.resource.material_manager.borrow_mut(),
             &mut self.resource.shader_manager.borrow_mut(),
-            self.camera.clone());
+            camera);
 
         let m = 40f64;
         self.camera_repere.write().unwrap().position = 
@@ -666,8 +666,6 @@ impl Render {
                 -self.camera_ortho.borrow().data.width/2f64 +m, 
                 -self.camera_ortho.borrow().data.height/2f64 +m, 
                 -10f64);
-        let camera = 
-            self.camera.borrow();
         self.camera_repere.write().unwrap().orientation = 
             camera.object.read().unwrap().orientation.inverse();
 
@@ -676,7 +674,7 @@ impl Render {
             &mut self.passes,
             &mut self.resource.material_manager.borrow_mut(),
             &mut self.resource.shader_manager.borrow_mut(),
-            self.camera_ortho.clone());
+            &*self.camera_ortho.borrow());
         }
 
         {
@@ -751,7 +749,7 @@ impl Render {
             //ld.push_back(self.dragger.clone());
             //self.prepare_passes_objects_per(ld);
             //self.prepare_passes_objects_per(draggers);
-            self.prepare_passes_objects_per_mmr(draggers2);
+            self.prepare_passes_objects_per_mmr(camera, draggers2);
 
 
             /*
@@ -793,7 +791,7 @@ impl Render {
                 &mut self.passes,
                 &mut self.resource.material_manager.borrow_mut(),
                 &mut self.resource.shader_manager.borrow_mut(),
-                self.camera.clone());
+                camera);
 
             for p in self.passes.values()
             {
@@ -816,7 +814,7 @@ fn get_pass_from_mesh_render<'a>(
     passes : &'a mut HashMap<String, Box<RenderPass>>, 
     material_manager : &mut resource::ResourceManager<material::Material>,
     shader_manager : &mut resource::ResourceManager<shader::Shader>,
-    camera : Rc<RefCell<camera::Camera>>,
+    camera : &camera::Camera,
     load : Arc<Mutex<usize>>
     ) -> Option<&'a mut CameraPass>
 {
@@ -857,14 +855,22 @@ fn get_pass_from_mesh_render<'a>(
                 Occupied(entry) => entry.into_mut(),
             };
 
-            let key_cam = camera.borrow().id.clone();
+            let key_cam = camera.id.clone();
             let cam_pass = match rp.passes.entry(key_cam) {
-                Vacant(entry) => 
-                    entry.insert(box CameraPass::new(camera.clone())),
+                Vacant(entry) => {
+                    let world = {
+                        let ob = camera.object.read().unwrap();
+                        ob.get_world_matrix().clone()
+                    };
+                    let per = camera.get_perspective();
+                    let cam_mat_inv = world.get_inverse();
+                    let matrix = &per * &cam_mat_inv;
+
+                    entry.insert(box CameraPass::new(matrix))
+                },
                 Occupied(entry) => entry.into_mut(),
             };
             
-            //cam_pass.add_rmm(o.clone());
             Some(cam_pass)
         }
 
@@ -875,7 +881,7 @@ fn prepare_passes_object(
     passes : &mut HashMap<String, Box<RenderPass>>, 
     material_manager : &mut resource::ResourceManager<material::Material>,
     shader_manager : &mut resource::ResourceManager<shader::Shader>,
-    camera : Rc<RefCell<camera::Camera>>
+    camera : &camera::Camera,
     )
 {
     let load = Arc::new(Mutex::new(0));
@@ -887,7 +893,7 @@ fn prepare_passes_object(
                 passes,
                 material_manager,
                 shader_manager,
-                camera.clone());
+                camera);
         }
 
     {
@@ -1051,6 +1057,7 @@ impl GameRender {
 
     fn prepare_passes_objects_per(
         &mut self,
+        camera : &camera::Camera,
         obs : &[Arc<RwLock<object::Object>>])
     {
         for (_,p) in self.passes.iter_mut()
@@ -1064,17 +1071,18 @@ impl GameRender {
                 &mut self.passes,
                 &mut self.resource.material_manager.borrow_mut(),
                 &mut self.resource.shader_manager.borrow_mut(),
-                self.camera.clone());
+                camera);
         }
     }
 
     pub fn draw(
         &mut self,
+        camera : &camera::Camera,
         objects : &[Arc<RwLock<object::Object>>],
         loading : Arc<Mutex<usize>>
         ) -> bool
     {
-        self.prepare_passes_objects_per(objects);
+        self.prepare_passes_objects_per(camera, objects);
 
         let mut not_yet_loaded = 0;
         for p in self.passes.values()

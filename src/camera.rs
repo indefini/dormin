@@ -140,11 +140,8 @@ impl ObjectKind {
 pub struct Camera
 {
     pub data : CameraData,
-    //pub position : vec::Vec3,
-    //pub orientation : Orientation,
     #[serde(serialize_with="serialize_arc", deserialize_with="deserialize_arc")]
     pub object : Arc<RwLock<object::Object>>,
-    //pub object : ObjectKind, 
     pub id : uuid::Uuid,
     pub object_id : Option<uuid::Uuid>
 }

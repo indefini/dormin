@@ -490,6 +490,11 @@ impl Object
         None
     }
 
+    pub fn get_pos_quat(&self) -> (vec::Vec3, vec::Quat)
+    {
+        (self.position, self.orientation.as_quat())
+    }
+
 }
 
 pub fn child_add(parent : Arc<RwLock<Object>>, child : Arc<RwLock<Object>>)
