@@ -604,6 +604,16 @@ impl Render {
             p.passes.clear();
         }
 
+        self.add_mmr(camera, mmr);
+    }
+
+    fn add_mmr(
+        &mut self,
+        camera : &CameraIdMat,
+        mmr : &[MatrixMeshRender])
+    {
+        let load = Arc::new(Mutex::new(0));
+
         for m in mmr {
             let pass = get_pass_from_mesh_render(
                 &m.mr,
@@ -624,7 +634,7 @@ impl Render {
         &mut self,
         camera : &CameraIdMat,
         objects : &[Arc<RwLock<object::Object>>],
-        cameras: &[Arc<RwLock<object::Object>>],
+        cameras : &[MatrixMeshRender],
         selected : &[Arc<RwLock<object::Object>>],
         draggers2 : &[MatrixMeshRender],
         on_finish : &Fn(bool),
@@ -652,7 +662,7 @@ impl Render {
 
         self.clean_passes();
         self.add_objects_to_passes(camera, objects);
-        self.add_objects_to_passes(camera, cameras);
+        self.add_mmr(camera, cameras);
 
         {
         prepare_passes_object(
