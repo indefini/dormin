@@ -117,7 +117,7 @@ impl Orientation
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Transform {
     pub position : vec::Vec3, 
     pub orientation : Orientation,
@@ -128,10 +128,9 @@ pub struct Transform {
     local_matrix : matrix::Matrix4
 }
 
-impl Transform
+impl Default for Transform
 {
-    pub fn new() -> Transform
-    {
+    fn default() -> Transform {
         Transform {
             position : vec::Vec3::zero(),
             orientation : Orientation::Quat(vec::Quat::identity()),
@@ -140,7 +139,10 @@ impl Transform
             local_matrix : matrix::Matrix4::identity()
         }
     }
+}
 
+impl Transform
+{
     pub fn from_position_orientation_scale(
         pos : vec::Vec3,
         ori : Orientation,
