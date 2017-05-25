@@ -1543,4 +1543,21 @@ impl CameraIdMat {
             matrix : matrix
         }
     }
+
+    pub fn from_transform_camera2(
+        id : uuid::Uuid,
+        transform : &transform::Transform,
+        camera : &camera2::Camera) -> CameraIdMat
+    {
+        let local = transform.get_computed_local_matrix();
+        let per = camera.get_perspective();
+        let cam_mat_inv = local.get_inverse();
+        let matrix = &per * &cam_mat_inv;
+
+        CameraIdMat {
+            id : id,
+            orientation : transform.orientation,
+            matrix : matrix
+        }
+    }
 }

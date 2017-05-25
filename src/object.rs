@@ -145,9 +145,9 @@ impl Object
     pub fn get_matrix(&self) -> matrix::Matrix4
     {
         //TODO optim
-        let mt = matrix::Matrix4::translation(self.position);
-        let mq = matrix::Matrix4::rotation(self.orientation.as_quat());
-        let ms = matrix::Matrix4::scale(self.scale);
+        let mt = matrix::Matrix4::translation(&self.position);
+        let mq = matrix::Matrix4::rotation(&self.orientation.as_quat());
+        let ms = matrix::Matrix4::scale(&self.scale);
 
         &(&mt * &mq) * &ms
     }
@@ -155,9 +155,9 @@ impl Object
     pub fn get_world_matrix(&self) -> matrix::Matrix4
     {
         //TODO optim
-        let mt = matrix::Matrix4::translation(self.world_position());
-        let mq = matrix::Matrix4::rotation(self.world_orientation());
-        let ms = matrix::Matrix4::scale(self.world_scale());
+        let mt = matrix::Matrix4::translation(&self.world_position());
+        let mq = matrix::Matrix4::rotation(&self.world_orientation());
+        let ms = matrix::Matrix4::scale(&self.world_scale());
 
         &(&mt * &mq) * &ms
     }
@@ -493,6 +493,14 @@ impl Object
     pub fn get_pos_quat(&self) -> (vec::Vec3, vec::Quat)
     {
         (self.position, self.orientation.as_quat())
+    }
+
+    pub fn make_transform(&self) -> transform::Transform
+    {
+        transform::Transform::from_position_orientation_scale(
+            self.position,
+            self.orientation,
+            self.scale)
     }
 
 }

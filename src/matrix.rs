@@ -134,7 +134,7 @@ impl Matrix4
         Matrix4 { data : m }
     }
 
-    pub fn translation(t : vec::Vec3) -> Matrix4
+    pub fn translation(t : &vec::Vec3) -> Matrix4
     {
         let mut m : [f64; 16] = [0f64; 16];
 
@@ -150,7 +150,7 @@ impl Matrix4
         Matrix4 { data : m }
     }
 
-    pub fn rotation(q : vec::Quat) -> Matrix4
+    pub fn rotation(q : &vec::Quat) -> Matrix4
     {
         let mut m : [f64; 16] = [0f64; 16];
 
@@ -213,7 +213,7 @@ impl Matrix4
         Matrix4 { data : m}
     }
 
-    pub fn scale(s : vec::Vec3) -> Matrix4
+    pub fn scale(s : &vec::Vec3) -> Matrix4
     {
         let mut m : [f64; 16] = [0f64; 16];
 

@@ -21,7 +21,7 @@ pub enum Projection
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CameraData
 {
-    fovy : f64,
+    pub fovy : f64,
     pub fovy_base : f64,
     pub near : f64,
     pub far : f64,
@@ -36,9 +36,9 @@ pub struct CameraData
     pub clear_color : vec::Vec4,
     pub projection : Projection,
 
-    origin : vec::Vec3,
-    local_offset : vec::Vec3,
-    center : vec::Vec3,
+    pub origin : vec::Vec3,
+    pub local_offset : vec::Vec3,
+    pub center : vec::Vec3,
 
     //pub euler : vec::Vec3
 }

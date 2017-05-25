@@ -141,6 +141,20 @@ impl Transform
         }
     }
 
+    pub fn from_position_orientation_scale(
+        pos : vec::Vec3,
+        ori : Orientation,
+        scale : vec::Vec3) -> Transform
+    {
+        Transform {
+            position : pos,
+            orientation : ori,
+            scale : scale,
+            dirty : true,
+            local_matrix : matrix::Matrix4::identity()
+        }
+    }
+
     pub fn get_or_compute_local_matrix(&mut self) -> &matrix::Matrix4
     {
         self.compute_local_matrix();
@@ -156,11 +170,11 @@ impl Transform
     {
         if self.dirty {
             //TODO optim possible?
-            let mt = matrix::Matrix4::translation(self.position);
-            let mq = matrix::Matrix4::rotation(self.orientation.as_quat());
-            let ms = matrix::Matrix4::scale(self.scale);
+            self.local_matrix = compute_matrix_from_position_rotation_scale(
+                &self.position,
+                &self.orientation.as_quat(),
+                &self.scale);
 
-            self.local_matrix = &(&mt * &mq) * &ms;
             self.dirty = false;
         }
     }
@@ -170,7 +184,25 @@ impl Transform
     {
         self.dirty = true;
     }
+
+    pub fn get_pos_quat(&self) -> (vec::Vec3, vec::Quat)
+    {
+        (self.position, self.orientation.as_quat())
+    }
 }
+
+fn compute_matrix_from_position_rotation_scale(
+    position : &vec::Vec3,
+    orientation : &vec::Quat,
+    scale : &vec::Vec3) -> matrix::Matrix4
+{
+    let mt = matrix::Matrix4::translation(position);
+    let mq = matrix::Matrix4::rotation(orientation);
+    let ms = matrix::Matrix4::scale(scale);
+
+    &(&mt * &mq) * &ms
+}
+
 
 impl Mul<Orientation> for Orientation {
     type Output = Orientation;

@@ -9,6 +9,7 @@ use matrix;
 use geometry;
 use transform::{Transform,Orientation};
 use uuid;
+use camera;
 
 //extern crate serde_json;
 
@@ -17,6 +18,16 @@ pub enum Projection
 {
     Perspective,
     Orthographic
+}
+
+impl Projection {
+    fn from_old_camera_data(p : &camera::Projection) -> Projection
+    {
+        match *p {
+            camera::Projection::Perspective => Projection::Perspective,
+            camera::Projection::Orthographic => Projection::Orthographic,
+        }
+    }
 }
 
 #[derive(Clone,Serialize,Deserialize)]
@@ -230,5 +241,63 @@ impl Camera
         return screen;
     }
 
+    //TODO remove
+    pub fn from_old_camera_data(data : &camera::CameraData) -> Camera
+    {
+        Camera {
+            fovy : data.fovy,
+            fovy_base : data.fovy_base,
+            near : data.near,
+            far : data.far,
+            aspect : data.aspect,
+            width : data.width,
+            height : data.height,
+            height_base : data.height_base,
+
+            //clear_color : vec::Vec4::zero(),
+            projection : Projection::from_old_camera_data(&data.projection)
+        }
+    }
+
 }
 
+pub struct CameraTransform<'a>
+{
+    pub camera : &'a Camera,
+    pub transform : &'a Transform
+}
+
+impl<'a> CameraTransform<'a>
+{
+    pub fn new(transform : &'a Transform, cam : &'a Camera) -> CameraTransform<'a>
+    {
+        CameraTransform {
+            camera : cam,
+            transform : transform
+        }
+    }
+
+    pub fn ray_from_screen(
+        &self,
+        x : f64,
+        y : f64,
+        length: f64) -> geometry::Ray
+    {
+        self.camera.ray_from_screen(self.transform, x, y, length)
+    }
+
+    pub fn world_to_screen(
+        &self,
+        p : vec::Vec3) -> vec::Vec2
+    {
+        self.camera.world_to_screen(self.transform.get_computed_local_matrix(), p)
+    }
+
+    pub fn get_frustum_planes_rect(
+        &self,
+        left : f64, top : f64, width : f64, height : f64) -> [geometry::Plane;6]
+    {
+        self.camera.get_frustum_planes_rect(self.transform, left, top, width, height)
+    }
+
+}
