@@ -142,6 +142,11 @@ impl Vec3
         }
     }
 
+    pub fn is_zero(&self) -> bool
+    {
+        self.x == 0f64 && self.y == 0f64 && self.z == 0f64
+    }
+
     pub fn one() -> Vec3
     {
         Vec3 {
