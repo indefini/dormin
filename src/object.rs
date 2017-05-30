@@ -1000,3 +1000,32 @@ fn debug_lua(lua : &mut lua::State)
     println!("");
 }
 
+/*
+use intersection::MeshTransform;
+fn object_to_mt<'a>(o : &Object, mm : &'a mut resource::ResourceManager<mesh::Mesh>) -> Option<MeshTransform<'a>>
+{
+    match o.mesh_render {
+        None => None,
+        Some(mr) => {
+            let wp = o.world_position();
+            let wq = o.world_orientation();
+            let ws = o.world_scale();
+
+            let m = mr.mesh.clone();
+            if let Some(mesh) = m.get_ref(mm) {
+                let mt = MeshTransform {
+                    mesh : mesh,
+                    position : wp,
+                    orientation : wq,
+                    scale : ws
+                };
+                Some(mt)
+            }
+            else {
+                None
+            }
+        }
+    }
+}
+*/
+

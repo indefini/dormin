@@ -2,6 +2,7 @@ use object;
 use geometry;
 use mesh;
 use resource;
+use vec;
 use std::f64::EPSILON;
 use component::mesh_render;
 
@@ -27,6 +28,23 @@ impl IntersectionRay
         }
     }
 }
+
+pub struct MeshTransform<'a>
+{
+    pub mesh : &'a mesh::Mesh,
+    pub position : vec::Vec3,
+    pub orientation : vec::Quat,
+    pub scale : vec::Vec3
+}
+
+pub fn ray_mesh_transform(
+    ray : &geometry::Ray,
+    mt : &MeshTransform,
+    ) -> IntersectionRay
+{
+    ray_mesh(ray, mt.mesh, &mt.position, &mt.orientation, &mt.scale)
+}
+
 
 pub fn ray_object(
     ray : &geometry::Ray,
