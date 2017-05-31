@@ -152,7 +152,17 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         if self.instance.is_some() {
             self.instance.as_ref()
         }
-        else if let Some(i) = self.resource.get() {
+        else {
+            self.get_ref_no_instance(manager)
+        }
+    }
+
+    pub fn get_ref_no_instance<'a>(
+        &self,
+        manager : &'a ResourceManager<T>
+        ) -> Option<&'a T>
+    {
+        if let Some(i) = self.resource.get() {
             manager.get_as_ref(i)
         }
         else {

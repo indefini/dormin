@@ -1,10 +1,7 @@
-use object;
 use geometry;
 use mesh;
-use resource;
 use vec;
 use std::f64::EPSILON;
-use component::mesh_render;
 
 use vec::{Vec3, Quat};
 
@@ -43,37 +40,6 @@ pub fn ray_mesh_transform(
     ) -> IntersectionRay
 {
     ray_mesh(ray, mt.mesh, &mt.position, &mt.orientation, &mt.scale)
-}
-
-
-pub fn ray_object(
-    ray : &geometry::Ray,
-    o : &object::Object,
-    resource : &resource::ResourceGroup
-    ) -> IntersectionRay
-{
-    let out = IntersectionRay::new();
-
-    match o.mesh_render {
-        None => out,
-        Some(ref mr) => {
-            let wp = o.world_position();
-            let wq = o.world_orientation();
-            let ws = o.world_scale();
-
-            //TODO
-            //let ir_box = ray_box(ray, .... 
-            //let m = &mr.mesh;
-            //ray_mesh(ray, &*m.read().unwrap(), &wp, &wq, &ws)
-            let m = &mr.mesh;
-            if let Some(mesh) = m.get_ref(&mut *resource.mesh_manager.borrow_mut()) {
-                ray_mesh(ray, mesh, &wp, &wq, &ws)
-            }
-            else {
-                out
-            }
-        }
-    }
 }
 
 // test for box first, and then mesh.
@@ -493,32 +459,14 @@ pub fn planes_is_box_in_allow_false_positives(planes : &[geometry::Plane], b : &
     return true;
 }
 
-
-
-
-
-
-pub fn is_object_in_planes(
+pub fn is_mesh_transform_in_planes(
     planes : &[geometry::Plane],
-    o : &object::Object,
-    resource : &resource::ResourceGroup
-    ) 
+    mt : &MeshTransform) 
     -> bool
 {
-    let mr = match o.mesh_render {
-        None => 
-            return is_position_in_planes(planes, o.position),
-        Some(ref mr) => {
-            mr
-        }
-    };
-
-    let mm = &mut *resource.mesh_manager.borrow_mut();
-    let m = mr.mesh.get_ref(mm).unwrap();
-
-    //first test the box and then test the object/mesh
-    if let Some(ref aa) = m.aabox {
-        let b = aa.to_obox(o.position, o.orientation.as_quat(), o.scale);
+    //first test the box and then test the mesh
+    if let Some(ref aa) = mt.mesh.aabox {
+        let b = aa.to_obox(mt.position, mt.orientation, mt.scale);
         if !planes_is_box_in_allow_false_positives(planes, &b) {
             return false;
         }
@@ -526,7 +474,7 @@ pub fn is_object_in_planes(
 
     let mut new_planes = planes.clone().to_vec();
 
-    let r = geometry::Repere { origin : o.position, rotation : o.orientation.as_quat()};
+    let r = geometry::Repere { origin : mt.position, rotation : mt.orientation};
     let iq = r.rotation.conj();
 
     for p in &mut new_planes {
@@ -536,16 +484,15 @@ pub fn is_object_in_planes(
         p.normal = p.normal - p.point;
     }
 
-
-    let vertices = match m.buffer_f32_get("position") {
-        None => return is_position_in_planes(planes, o.position),
+    let vertices = match mt.mesh.buffer_f32_get("position") {
+        None => return is_position_in_planes(planes, mt.position),
         Some(v) => v
     };
 
-    let faces = match m.buffer_u32_get("faces") {
+    let faces = match mt.mesh.buffer_u32_get("faces") {
         None => {
             println!("TODO handle when there is no indices");
-            return is_position_in_planes(planes, o.position);
+            return is_position_in_planes(planes, mt.position);
         },
         Some(f) => f
     };
@@ -562,11 +509,11 @@ pub fn is_object_in_planes(
     //for i in range_step(0, faces.data.len(), 3) {
     for i in (0..faces.data.len()).step_by(3) {
         let index = faces.data[i] as usize;
-        let v0 = get_vertex(&vertices.data, index) * o.scale;
+        let v0 = get_vertex(&vertices.data, index) * mt.scale;
         let index = faces.data[i+1] as usize;
-        let v1 = get_vertex(&vertices.data, index) * o.scale;
+        let v1 = get_vertex(&vertices.data, index) * mt.scale;
         let index = faces.data[i+2] as usize;
-        let v2 = get_vertex(&vertices.data, index) * o.scale;
+        let v2 = get_vertex(&vertices.data, index) * mt.scale;
 
         let tri = geometry::Triangle::new(v0,v1,v2);
 

@@ -1000,18 +1000,18 @@ fn debug_lua(lua : &mut lua::State)
     println!("");
 }
 
-/*
 use intersection::MeshTransform;
-fn object_to_mt<'a>(o : &Object, mm : &'a mut resource::ResourceManager<mesh::Mesh>) -> Option<MeshTransform<'a>>
+//TODO remove 'a from Object by using get_ref_no_instance instead of get_ref
+pub fn object_to_mt<'a>(o : &'a Object, mm : &'a mut resource::ResourceManager<mesh::Mesh>) -> Option<MeshTransform<'a>>
 {
     match o.mesh_render {
         None => None,
-        Some(mr) => {
+        Some(ref mr) => {
             let wp = o.world_position();
             let wq = o.world_orientation();
             let ws = o.world_scale();
 
-            let m = mr.mesh.clone();
+            let m = &mr.mesh;
             if let Some(mesh) = m.get_ref(mm) {
                 let mt = MeshTransform {
                     mesh : mesh,
@@ -1027,5 +1027,26 @@ fn object_to_mt<'a>(o : &Object, mm : &'a mut resource::ResourceManager<mesh::Me
         }
     }
 }
-*/
+
+use geometry;
+use intersection;
+pub fn is_object_in_planes(
+    planes : &[geometry::Plane],
+    o : &Object,
+    resource : &resource::ResourceGroup
+    ) 
+    -> bool
+{
+    match o.mesh_render {
+        None => 
+            intersection::is_position_in_planes(planes, o.position),
+        Some(ref mr) => {
+            match object_to_mt(o, &mut *resource.mesh_manager.borrow_mut()) {
+                Some(ref mt) =>
+                intersection::is_mesh_transform_in_planes(planes, mt),
+                None => intersection::is_position_in_planes(planes, o.position)
+            }
+        }
+    }
+}
 
