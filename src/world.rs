@@ -898,3 +898,12 @@ pub trait Creator<O> {
     fn create_object(&self, name : &str) -> O;
 }
 
+pub trait Graph<E> {
+    fn get_parent(&self, e : &E) -> Option<&E>;
+}
+
+use transform;
+pub trait GetWorld {
+    fn get_world_transform(&self, graph : &Graph<Self>) -> transform::Transform;
+}
+
