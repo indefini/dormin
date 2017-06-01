@@ -1050,3 +1050,15 @@ pub fn is_object_in_planes(
     }
 }
 
+use world;
+impl world::GetWorld for Arc<RwLock<Object>> {
+    fn get_world_transform(&self, graph : &world::Graph<Self>) -> transform::Transform
+    {
+        let o = self.read().unwrap();
+        transform::Transform::from_position_orientation_scale(
+            o.position,
+            o.orientation,
+            o.scale)
+    }
+}
+

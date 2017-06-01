@@ -893,17 +893,34 @@ pub struct WorldRefDataMut<'a> {
     pub data : &'a mut Data
 }
 
-
-pub trait Creator<O> {
-    fn create_object(&self, name : &str) -> O;
-}
-
 pub trait Graph<E> {
     fn get_parent(&self, e : &E) -> Option<&E>;
 }
 
+pub struct NoGraph;
+impl<E> Graph<E> for NoGraph
+{
+    fn get_parent(&self, e : &E) -> Option<&E>
+    {
+        None
+    }
+}
+
+
 use transform;
 pub trait GetWorld {
     fn get_world_transform(&self, graph : &Graph<Self>) -> transform::Transform;
+}
+
+
+//TODO remove
+impl GetWorld for usize
+{
+    fn get_world_transform(&self, graph : &Graph<Self>) -> transform::Transform
+    {
+        //TODO
+        println!("todo should remove this {}, {}", file!(), line!() );
+        transform::Transform::default()
+    }
 }
 

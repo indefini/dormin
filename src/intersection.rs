@@ -1,6 +1,7 @@
 use geometry;
 use mesh;
 use vec;
+use transform;
 use std::f64::EPSILON;
 
 use vec::{Vec3, Quat};
@@ -32,6 +33,19 @@ pub struct MeshTransform<'a>
     pub position : vec::Vec3,
     pub orientation : vec::Quat,
     pub scale : vec::Vec3
+}
+
+impl<'a> MeshTransform<'a>
+{
+    pub fn with_transform(mesh : &'a mesh::Mesh, transform : &transform::Transform) -> MeshTransform<'a>
+    {
+        MeshTransform {
+            mesh : mesh,
+            position : transform.position,
+            orientation : transform.orientation.as_quat(),
+            scale : transform.scale
+        }
+    }
 }
 
 pub fn ray_mesh_transform(
