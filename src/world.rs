@@ -906,17 +906,15 @@ impl<E> Graph<E> for NoGraph
     }
 }
 
-
 use transform;
-pub trait GetWorld {
-    fn get_world_transform(&self, graph : &Graph<Self>) -> transform::Transform;
+pub trait GetWorld<T> {
+    fn get_world_transform(&self, graph : &Graph<T>) -> transform::Transform;
 }
 
-
 //TODO remove
-impl GetWorld for usize
+impl<T> GetWorld<T> for usize
 {
-    fn get_world_transform(&self, graph : &Graph<Self>) -> transform::Transform
+    fn get_world_transform(&self, graph : &Graph<T>) -> transform::Transform
     {
         //TODO
         println!("todo should remove this {}, {}", file!(), line!() );
