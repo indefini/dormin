@@ -537,11 +537,7 @@ impl Render {
             p.passes.clear();
         }
 
-        let mut center = vec::Vec3::zero();
-        let mut ori = vec::Quat::identity();
         for o in objects {
-            center = center + o.read().unwrap().position;
-            ori = ori * o.read().unwrap().world_orientation();
             prepare_passes_object(
                 o.clone(),
                 &mut self.passes,
@@ -634,15 +630,18 @@ impl Render {
         &mut self,
         camera : &CameraIdMat,
         objects : &[Arc<RwLock<object::Object>>],
+        objects2 : &[MatrixMeshRender],
         cameras : &[MatrixMeshRender],
         selected : &[Arc<RwLock<object::Object>>],
+        selected2 : &[MatrixMeshRender],
         draggers2 : &[MatrixMeshRender],
         on_finish : &Fn(bool),
         load : Arc<Mutex<usize>>
         ) -> usize
     {
         let mut not_loaded = 0;
-        self.prepare_passes_selected(camera, selected);
+        //self.prepare_passes_selected(camera, selected);
+        self.prepare_passes_objects_per_mmr(camera, selected2);
         //self.fbo_selected.read().unwrap().cgl_use();
         {
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
@@ -662,6 +661,8 @@ impl Render {
 
         self.clean_passes();
         self.add_objects_to_passes(camera, objects);
+        //self.prepare_passes_objects_per_mmr(camera, objects2);
+        self.add_mmr(camera, objects2);
         self.add_mmr(camera, cameras);
 
         {
@@ -740,7 +741,7 @@ impl Render {
         }
         //*/
 
-        let sel_len = selected.len();
+        let sel_len = selected2.len();
 
         if sel_len > 0 {
             let mut l = Vec::new();
