@@ -909,6 +909,7 @@ impl<E> Graph<E> for NoGraph
 use transform;
 pub trait GetWorld<T> {
     fn get_world_transform(&self, graph : &Graph<T>) -> transform::Transform;
+    fn get_transform(&self) -> transform::Transform;
 }
 
 //TODO remove
@@ -918,6 +919,11 @@ impl<T> GetWorld<T> for usize
     {
         //TODO
         println!("todo should remove this {}, {}", file!(), line!() );
+        transform::Transform::default()
+    }
+
+    fn get_transform(&self) -> transform::Transform
+    {
         transform::Transform::default()
     }
 }

@@ -1056,6 +1056,15 @@ impl<T> world::GetWorld<T> for Arc<RwLock<Object>> {
     {
         let o = self.read().unwrap();
         transform::Transform::from_position_orientation_scale(
+            o.world_position(),
+            transform::Orientation::Quat(o.world_orientation()),
+            o.world_scale())
+    }
+
+    fn get_transform(&self) -> transform::Transform
+    {
+        let o = self.read().unwrap();
+        transform::Transform::from_position_orientation_scale(
             o.position,
             o.orientation,
             o.scale)
