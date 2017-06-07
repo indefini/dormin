@@ -894,13 +894,13 @@ pub struct WorldRefDataMut<'a> {
 }
 
 pub trait Graph<E> {
-    fn get_parent(&self, e : &E) -> Option<&E>;
+    fn get_parent(&self, e : &E) -> Option<E>;
 }
 
 pub struct NoGraph;
 impl<E> Graph<E> for NoGraph
 {
-    fn get_parent(&self, e : &E) -> Option<&E>
+    fn get_parent(&self, e : &E) -> Option<E>
     {
         None
     }
