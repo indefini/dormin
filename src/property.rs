@@ -73,8 +73,9 @@ pub trait PropertyGet
   }
 }
 
-impl PropertyGet for f64{}
-impl PropertyGet for String{}
+impl PropertyGet for f64 {}
+impl PropertyGet for String {}
+impl PropertyGet for usize {}
 
 /*
 impl<T:Any+Clone> PropertyRead for Option<T>
