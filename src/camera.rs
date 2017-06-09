@@ -159,6 +159,16 @@ fn serialize_arc<S,T>(t: &Arc<RwLock<T>>, s : S) -> Result<S::Ok, S::Error> wher
 
 impl Camera
 {
+    pub fn new() -> Camera
+    {
+        Camera {
+            data : Default::default(),
+            object : Arc::new(RwLock::new(object::Object::new("camera"))),
+            id : uuid::Uuid::new_v4(),
+            object_id : None
+        }
+    }
+
     pub fn get_perspective(&self) -> matrix::Matrix4
     {
         //TODO

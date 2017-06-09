@@ -125,22 +125,26 @@ impl Clone for Object {
 
 impl Object
 {
-    /*
     pub fn new(name : &str) -> Object
     {
         Object {
-            name : String::from_str(name),
-            id : 0,
+            name : String::from(name),
+            id : uuid::Uuid::new_v4(),
             mesh_render : None,
             position : vec::Vec3::zero(),
-            orientation : vec::Quat::identity(),
+            //orientation : vec::Quat::identity(),
+            orientation : transform::Orientation::new_quat(),
             //angles : vec::Vec3::zero(),
             scale : vec::Vec3::one(),
             children : Vec::new(),
-            parent : None
+            parent : None,
+            //transform : box transform::Transform::new()
+            components : Vec::new(),
+            comp_data : Vec::new(),
+            comp_string : Vec::new(),
+            comp_lua : Vec::new(),
         }
     }
-    */
 
     pub fn get_matrix(&self) -> matrix::Matrix4
     {

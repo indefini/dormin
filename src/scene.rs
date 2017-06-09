@@ -320,12 +320,16 @@ impl Scene
     pub fn new_from_file(file_path : &str) -> Scene
     {
         let mut file = String::new();
-        File::open(&Path::new(file_path)).ok().unwrap().read_to_string(&mut file);
-        let mut scene : Scene = serde_json::from_str(&file).unwrap();
+        match File::open(&Path::new(file_path)){
+            Ok(mut f) => {
+                f.read_to_string(&mut file);
+                let mut scene : Scene = serde_json::from_str(&file).unwrap();
 
-        scene.post_read();
-
-        scene
+                scene.post_read();
+                scene
+            },
+            _ => Scene::new(file_path, Uuid::new_v4(), camera::Camera::new())
+        }
     }
 
     fn post_read(&mut self)
