@@ -609,7 +609,7 @@ impl Data {
 
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize,Deserialize, Clone)]
 pub struct DataOwners {
     human : Vec<usize>,
     zombie : Vec<usize>,
@@ -664,7 +664,7 @@ impl DataOwners {
 
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize,Deserialize, Clone)]
 pub struct World {
     entities : Vec<Entity>,
     //comps : Data,
