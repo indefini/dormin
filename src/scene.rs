@@ -525,9 +525,16 @@ impl Scene
     }
 
 
-    pub fn add_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
+    pub fn add_objects(&mut self, parents : &[Option<Uuid>], obs : &[Arc<RwLock<object::Object>>])
     {
-        let pvec = self.find_objects_by_id_or_none(parents);
+        let pvec : Vec<Option<Arc<RwLock<object::Object>>>> = 
+            parents.iter().map(
+                |x| if let Some(ref y) = *x {
+                    self.find_object_by_id(y)
+                } 
+                else {
+                    None
+                }).collect();
 
         for (i,p) in pvec.iter().enumerate() {
             if let Some(ref par) = *p {
@@ -544,9 +551,17 @@ impl Scene
         self.objects.append(obs);
     }
 
-    pub fn remove_objects(&mut self, parents : &[Uuid], obs : &[Arc<RwLock<object::Object>>])
+    pub fn remove_objects(&mut self, parents : &[Option<Uuid>], obs : &[Arc<RwLock<object::Object>>])
     {
-        let pvec = self.find_objects_by_id_or_none(parents);
+        //let pvec = self.find_objects_by_id_or_none(parents);
+        let pvec : Vec<Option<Arc<RwLock<object::Object>>>> = 
+            parents.iter().map(
+                |x| if let Some(ref y) = *x {
+                    self.find_object_by_id(y)
+                } 
+                else {
+                    None
+                }).collect();
 
         fn remove(
             list : &mut Vec<Arc<RwLock<object::Object>>>,
