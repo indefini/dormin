@@ -1002,7 +1002,6 @@ pub struct GameRender
     fbo_manager : Arc<RwLock<resource::ResourceManager<fbo::Fbo>>>,
     */
 
-    camera : Rc<RefCell<camera::Camera>>,
     //camera_ortho : Rc<RefCell<camera::Camera>>,
 }
 
@@ -1010,7 +1009,6 @@ impl GameRender {
 
     //TODO remove dragger and put "view_objects"
     pub fn new(//factory: &mut factory::Factory,
-               camera : Rc<RefCell<camera::Camera>>,
                resource : Rc<resource::ResourceGroup>
                //dragger : Arc<RwLock<object::Object>>,
                ) -> GameRender
@@ -1041,7 +1039,6 @@ impl GameRender {
             fbo_manager : fbo_manager,
             */
             resource : resource,
-            camera : camera,
             //camera_ortho : camera_ortho,
         };
 
@@ -1054,9 +1051,6 @@ impl GameRender {
 
     pub fn resize(&mut self, w : c_int, h : c_int)
     {
-        let mut cam = self.camera.borrow_mut();
-        cam.set_resolution(w, h);
-
         //let mut cam_ortho = self.camera_ortho.borrow_mut();
         //cam_ortho.set_resolution(w, h);
     }
