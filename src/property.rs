@@ -1,5 +1,6 @@
 use object;
 use scene;
+use world;
 use camera;
 use vec;
 use std::any::{Any};//, AnyRefExt};
@@ -576,7 +577,7 @@ fn join_string(path : &Vec<String>) -> String
 
 #[macro_export]
 macro_rules! property_set_impl(
-    ($my_type:ty, [ $($member:ident),+ ]) => (
+    ($my_type:ty, [ $($member:ident),* ]) => (
         impl PropertyWrite for $my_type
         {
             fn test_set_property(&mut self, value: &Any)
@@ -600,7 +601,7 @@ macro_rules! property_set_impl(
                         match v[0] {
                             $(
                                 stringify!($member) => self.$member.test_set_property(value),
-                                )+
+                                )*
                                 _ => println!("1111 no such member, name : {}", v[0])
                         }
                     },
@@ -609,7 +610,7 @@ macro_rules! property_set_impl(
                         match v[0] {
                             $(
                                 stringify!($member) => self.$member.test_set_property_hier(yep.as_ref(),value),
-                                )+
+                                )*
                                 _ => println!(">>>> 1 , no such member,hier : {}, {}", v[0], name)
                         }
                     }
@@ -630,7 +631,7 @@ macro_rules! property_set_impl(
                         match v[0] {
                             $(
                                 stringify!($member) => self.$member.set_property(value),
-                                )+
+                                )*
                                 _ => println!("1111 no such member, name : {}", v[0])
                         }
                     },
@@ -639,7 +640,7 @@ macro_rules! property_set_impl(
                         match v[0] {
                             $(
                                 stringify!($member) => self.$member.set_property_hier(yep.as_ref(),value),
-                                )+
+                                )*
                                 _ => println!(">>>> 1 , no such member,hier : {}, {}", v[0], name)
                         }
                     }
@@ -665,7 +666,7 @@ macro_rules! property_set_impl(
                         match v[0] {
                             $(
                                 stringify!($member) => self.$member.add_item(yep.as_ref(), index, value),
-                                )+
+                                )*
                                 _ => println!(">>>> 1 , no such member, add_item : {}, {}", v[0], name)
                         }
                     }
@@ -691,7 +692,7 @@ macro_rules! property_set_impl(
                         match v[0] {
                             $(
                                 stringify!($member) => self.$member.del_item(yep.as_ref(), index),
-                                )+
+                                )*
                                 _ => println!(">>>> 1 , no such member, del_item : {}, {}", v[0], name)
                         }
                     }
@@ -712,9 +713,11 @@ property_set_impl!(scene::Scene,[name,camera]);
 property_set_impl!(camera::Camera,[data]);
 property_set_impl!(camera::CameraData,[far,near]);
 
+property_set_impl!(world::World,[]);
+
 #[macro_export]
 macro_rules! property_get_impl(
-    ($my_type:ty, [ $($member:ident),+ ]) => (
+    ($my_type:ty, [ $($member:ident),* ]) => (
         impl PropertyGet for $my_type
         {
             fn get_property_hier(&self, name : &str) -> Option<Box<Any>>
@@ -731,7 +734,7 @@ macro_rules! property_get_impl(
                         match v[0] {
                             $(
                                 stringify!($member) => self.$member.get_property(),
-                                )+
+                                )*
                                 _ => {
                                     println!("1111 no such member, name : {}", v[0]);
                                     None
@@ -743,7 +746,7 @@ macro_rules! property_get_impl(
                         match v[0] {
                             $(
                                 stringify!($member) => self.$member.get_property_hier(yep.as_ref()),
-                                )+
+                                )*
                                 _ => {
                                     println!("GET >>>> 1 , no such member,hier : {}, {}", v[0], name);
                                     None
@@ -766,3 +769,5 @@ property_get_impl!(object::Object,[name,position,orientation,scale,comp_data,com
 property_get_impl!(scene::Scene,[name,camera]);
 property_get_impl!(camera::Camera,[data]);
 property_get_impl!(camera::CameraData,[far,near]);
+
+property_get_impl!(world::World,[]);
