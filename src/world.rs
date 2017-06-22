@@ -666,6 +666,7 @@ impl DataOwners {
 
 #[derive(Serialize,Deserialize, Clone)]
 pub struct World {
+    pub id : usize,
     entities : Vec<Entity>,
     //comps : Data,
     pub entities_comps : Vec<HashMap<String, usize>>,
@@ -684,11 +685,12 @@ pub struct World {
 
 impl World
 {
-    pub fn new() -> World {
+    pub fn new(id : usize) -> World {
         World {
             entities : Vec::new(),
             entities_comps : Vec::new(),
-            owners : DataOwners::new()
+            owners : DataOwners::new(),
+            id : id
         }
     }
 
