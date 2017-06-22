@@ -128,17 +128,17 @@ impl Entity {
     }
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize,Deserialize, Clone)]
 pub struct Human {
     speed : f64
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize,Deserialize, Clone)]
 pub struct Zombie {
     speed : f64
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize,Deserialize, Clone)]
 pub struct Weapon;
 
 trait WorldChange {
@@ -406,7 +406,7 @@ impl Component for MeshRender {
 
 
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize,Deserialize, Clone)]
 pub struct Data {
     human : Vec<Human>,
     zombie : Vec<Zombie>,
@@ -666,9 +666,10 @@ impl DataOwners {
 
 #[derive(Serialize,Deserialize, Clone)]
 pub struct World {
+    pub name : String,
     pub id : usize,
     entities : Vec<Entity>,
-    //comps : Data,
+    //data : Box<Data>,
     pub entities_comps : Vec<HashMap<String, usize>>,
     //maybe it is better to do this? :
     //pub entities_comps : Vec<Option<usize>>, or Vec<Vec<usize>> if multiples components are possible
@@ -685,12 +686,14 @@ pub struct World {
 
 impl World
 {
-    pub fn new(id : usize) -> World {
+    pub fn new(name : String, id : usize) -> World {
         World {
             entities : Vec::new(),
             entities_comps : Vec::new(),
             owners : DataOwners::new(),
-            id : id
+            id : id,
+            name : name,
+            //data : box Data::new()
         }
     }
 
@@ -730,7 +733,7 @@ impl World
         }
     }
 
-    fn add_entity(&mut self, name : String) -> Entity {
+    pub fn add_entity(&mut self, name : String) -> Entity {
         let id = self.entities.len();
         self.entities_comps.push(HashMap::new());
         let e = Entity::new(id, name);
@@ -905,28 +908,6 @@ impl<E> Graph<E> for NoGraph
     fn get_parent(&self, e : &E) -> Option<E>
     {
         None
-    }
-}
-
-use transform;
-pub trait GetWorld<T> {
-    fn get_world_transform(&self, graph : &Graph<T>) -> transform::Transform;
-    fn get_transform(&self) -> transform::Transform;
-}
-
-//TODO remove
-impl<T> GetWorld<T> for usize
-{
-    fn get_world_transform(&self, graph : &Graph<T>) -> transform::Transform
-    {
-        //TODO
-        println!("todo should remove this {}, {}", file!(), line!() );
-        transform::Transform::default()
-    }
-
-    fn get_transform(&self) -> transform::Transform
-    {
-        transform::Transform::default()
     }
 }
 

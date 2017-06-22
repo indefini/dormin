@@ -771,3 +771,4 @@ property_get_impl!(camera::Camera,[data]);
 property_get_impl!(camera::CameraData,[far,near]);
 
 property_get_impl!(world::World,[]);
+property_get_impl!(world::Entity,[name,id]);
