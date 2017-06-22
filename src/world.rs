@@ -27,12 +27,12 @@ pub struct EntityRef
 pub struct EntityWorld<'a>
 {
     pub id : usize,
-    world : &'a World
+    world : &'a mut World
 }
 
 impl<'a> EntityWorld<'a>
 {
-    fn new(id : usize, world : &World) -> EntityWorld
+    fn new(id : usize, world : &mut World) -> EntityWorld
     {
         EntityWorld {
             id : id,
@@ -40,7 +40,7 @@ impl<'a> EntityWorld<'a>
         }
     }
 
-    fn from_ref(e : EntityRef, world : &World) -> EntityWorld
+    fn from_ref(e : EntityRef, world : &mut World) -> EntityWorld
     {
         EntityWorld {
             id : e.id,
@@ -48,10 +48,10 @@ impl<'a> EntityWorld<'a>
         }
     }
 
-    fn get_comp_mut_ptr<T:Component + Any>(&self, data : &mut Data) -> Option<*mut T>
+    fn get_comp_mut_ptr<T:Component + Any>(&mut self) -> Option<*mut T>
     {
         if let Some(v) = self.world.entities_comps[self.id].get(T::ID) {
-            data.get_mut_ptr::<T>(*v)
+            self.world.data.get_mut_ptr::<T>(*v)
         }
         else {
             println!("entworld no such thing");
@@ -59,10 +59,11 @@ impl<'a> EntityWorld<'a>
         }
     }
 
-    fn get_comp<'b, T:Component + Any>(&self, data : &'b Data) -> Option<&'b T>
+    fn get_comp<T:Component + Any>(self) -> Option<&'a T>
     {
         if let Some(v) = self.world.entities_comps[self.id].get(T::ID) {
-            data.get::<T>(*v)
+            let op : Option<&'a T> = self.world.data.get::<T>(*v);
+            op
         }
         else {
             None
@@ -141,7 +142,7 @@ pub struct Zombie {
 #[derive(Serialize,Deserialize, Clone)]
 pub struct Weapon;
 
-trait WorldChange {
+pub trait WorldChange {
 
     fn change(&self, world : &mut World);
 }
@@ -158,12 +159,12 @@ impl WorldChange for Nothing
 pub trait Component {
     const ID : &'static str;
 
-    fn update(&mut self, entity : &EntityMut, world : &World, data : &mut Data) -> Box<WorldChange>
+    fn update(&mut self, entity : &EntityMut, world : &mut World) -> Box<WorldChange>
     {
         Box::new(Nothing)
     }
 
-    fn update_entity_world(&mut self, entity : &EntityWorld, world : &World, data : &mut Data) -> Box<WorldChange>
+    fn update_entity_world(&mut self, entity : &mut EntityWorld, world : &mut World) -> Box<WorldChange>
     {
         Box::new(Nothing)
     }
@@ -184,16 +185,16 @@ impl Component for Human {
         self
      }
 
-    fn update(&mut self, entity : &EntityMut, world : &World, data : &mut Data) -> Box<WorldChange>
+    fn update(&mut self, entity : &EntityMut, world : &mut World) -> Box<WorldChange>
     {
         println!("updating human, {}", entity.id); 
 
-        if let Some(t) = world.get_comp_mut_ptr::<Transform>(data, entity)
+        if let Some(t) = world.get_comp_mut_ptr::<Transform>(entity)
         {
             let t = unsafe {&mut*t};
             println!("  ---> human pos, {:?}", t); 
             
-            if let Some(z) = find_nearest::<Weapon>(world, data, t.position.x)
+            if let Some(z) = find_nearest::<Weapon>(world, t.position.x)
             {
                println!("the nearest weapon is {:?}", z); 
             }
@@ -202,7 +203,7 @@ impl Component for Human {
                 println!("there is no weapon");
             }
 
-            if let Some(z) = find_nearest::<Zombie>(world, data, t.position.x)
+            if let Some(z) = find_nearest::<Zombie>(world, t.position.x)
             {
                println!("the nearest zombie is {:?}", z);
             }
@@ -219,20 +220,20 @@ impl Component for Human {
         Box::new(Nothing)
     }
 
-    fn update_entity_world(&mut self, entity : &EntityWorld, world : &World, data : &mut Data) -> Box<WorldChange>
+    fn update_entity_world(&mut self, entity : &mut EntityWorld, world : &mut World) -> Box<WorldChange>
     {
-        if let Some(t) = entity.get_comp_mut_ptr::<Transform>(data)
+        if let Some(t) = entity.get_comp_mut_ptr::<Transform>()
         //if let Some(t) = entity.get_comp_mut::<Transform>(data)
         {
             let t = unsafe {&mut*t};
             //t.x = 5f64;
             println!("  ---> human pos, {:?}", t);
 
-            if let Some(z) = find_nearest_comp::<Weapon>(world, data, t.position.x)
+            if let Some(z) = find_nearest_comp::<Weapon>(world, t.position.x)
             {
             }
 
-            if let Some(z) = find_nearest::<Weapon>(world, data, t.position.x)
+            if let Some(z) = find_nearest::<Weapon>(world, t.position.x)
             {
                println!("the nearest weapon is {:?}", z);
             }
@@ -241,7 +242,7 @@ impl Component for Human {
                 println!("there is no weapon");
             }
 
-            if let Some(z) = find_nearest::<Zombie>(world, data, t.position.x)
+            if let Some(z) = find_nearest::<Zombie>(world, t.position.x)
             {
                println!("the nearest zombie is {:?}", z); 
             }
@@ -258,13 +259,13 @@ impl Component for Human {
     }
 }
 
-fn find_nearest<T:Any>(world : &World, data : &Data, pos : f64) -> Option<EntityRef>
+fn find_nearest<T:Any>(world : &World, pos : f64) -> Option<EntityRef>
 {
     let en = world.get_entities_with::<T>();
 
     let mut nearest = None;
     for e in &en.v {
-        let t = world.get_comp::<Transform>(data, e.clone()).unwrap();
+        let t = world.get_comp::<Transform>(&*world.data, e.clone()).unwrap();
 
         match nearest {
             None => {
@@ -279,11 +280,11 @@ fn find_nearest<T:Any>(world : &World, data : &Data, pos : f64) -> Option<Entity
     nearest.map(|x| x.1)
 }
 
-fn find_nearest_comp<'a,T:Component+Any>(world : &World, data : &'a Data, pos : f64) -> Option<&'a T>
+fn find_nearest_comp<'a,T:Component+Any>(world : &'a mut World, pos : f64) -> Option<&'a T>
 {
-    if let Some(n) = find_nearest::<T>(world,data,pos) {
+    if let Some(n) = find_nearest::<T>(world,pos) {
         let e = EntityWorld::from_ref(n, world);
-        e.get_comp(data)
+        e.get_comp()
     }
     else {
         None
@@ -669,7 +670,7 @@ pub struct World {
     pub name : String,
     pub id : usize,
     entities : Vec<Entity>,
-    //data : Box<Data>,
+    data : Box<Data>,
     pub entities_comps : Vec<HashMap<String, usize>>,
     //maybe it is better to do this? :
     //pub entities_comps : Vec<Option<usize>>, or Vec<Vec<usize>> if multiples components are possible
@@ -693,11 +694,11 @@ impl World
             owners : DataOwners::new(),
             id : id,
             name : name,
-            //data : box Data::new()
+            data : box Data::new()
         }
     }
 
-    fn update(&self, data : &mut Data)
+    fn update(&mut self)
     {
         //let events = Vec::new();
         
@@ -722,12 +723,15 @@ impl World
         }
         */
 
-        for (id, entity_comps) in self.entities_comps.iter().enumerate() {
+        //for (id, entity_comps) in self.entities_comps.iter().enumerate() {
+        for id in 0..self.entities_comps.len() {
+            let entity_comps = self.entities_comps[id].clone();
             let e = EntityMut::new(id);
-            let ew = EntityWorld::new(id,self);
+            //let ew = EntityWorld::new(id,self);
             for (s, c_id) in entity_comps {
-                if let Some(c) = data.get_comp_mut_ptr(s, &e, *c_id) {
-                    unsafe { (*c).update_entity_world(&ew, self, data); }
+                if let Some(c) = self.data.get_comp_mut_ptr(&s, &e, c_id) {
+                    //unsafe { (*c).update_entity_world(&ew, self); }
+                    unsafe { (*c).update(&e, self); }
                 }
             }
         }
@@ -812,12 +816,12 @@ impl World
         }
     }
 
-    fn get_comp_mut_ptr<T:Component + Any>(&self, data : &mut Data, e : &EntityMut) -> Option<*mut T>
+    fn get_comp_mut_ptr<T:Component + Any>(&mut self, e : &EntityMut) -> Option<*mut T>
     {
         println!("World, get_comp_mut_ptr,  {}", T::ID);
         if let Some(v) = self.entities_comps[e.id].get(T::ID) {
             println!("   -> no problem  {}", T::ID);
-            data.get_mut_ptr::<T>(*v)
+            self.data.get_mut_ptr::<T>(*v)
         }
         else {
             println!("no such thing");
