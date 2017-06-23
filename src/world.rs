@@ -16,6 +16,7 @@ pub struct Entity
 {
     pub id : usize,
     pub name : String,
+    data : Data
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -71,6 +72,7 @@ impl<'a> EntityWorld<'a>
     }
 }
 
+/*
 pub struct EntityWorldMut<'a>
 {
     pub id : usize,
@@ -92,7 +94,7 @@ impl<'a> EntityWorldMut<'a>
         self.world.add_usize::<T>(self.id, data)
     }
 }
-
+*/
 
 
 impl EntityRef {
@@ -125,8 +127,29 @@ impl Entity {
         Entity {
             id : id,
             name : name,
+            data : Data::new()
         }
     }
+
+    fn to_ref(&self) -> EntityRef {
+        EntityRef {
+            id : self.id
+        }
+    }
+
+    pub fn to_mut(&self) -> EntityMut {
+        EntityMut {
+            id : self.id
+        }
+    }
+
+    pub fn add_comp<T : Component + Any>(&mut self)
+    {
+        if self.data.add::<T>().is_none() {
+            println!("cannot add {}", T::ID);
+        }
+    }
+
 }
 
 #[derive(Serialize,Deserialize, Clone)]
@@ -265,7 +288,7 @@ fn find_nearest<T:Any>(world : &World, pos : f64) -> Option<EntityRef>
 
     let mut nearest = None;
     for e in &en.v {
-        let t = world.get_comp::<Transform>(&*world.data, e.clone()).unwrap();
+        let t = world.get_comp::<Transform>(e.clone()).unwrap();
 
         match nearest {
             None => {
@@ -405,14 +428,31 @@ impl Component for MeshRender {
 
 }
 
+#[derive(Serialize,Deserialize, Clone)]
+pub struct EntityRep
+{
+    pub name : String,
+    pub data : Data
+}
+
+impl EntityRep
+{
+    pub fn new(name : String) -> EntityRep
+    {
+        EntityRep {
+            name : name,
+            data : Data::new()
+        }
+    }
+}
 
 
 #[derive(Serialize,Deserialize, Clone)]
 pub struct Data {
+    transform : Vec<Transform>,
     human : Vec<Human>,
     zombie : Vec<Zombie>,
     weapon : Vec<Weapon>,
-    transform : Vec<Transform>,
     camera : Vec<Camera>,
     mesh_render : Vec<MeshRender>
 }
@@ -685,7 +725,8 @@ pub struct World {
     owners : DataOwners,
 
     //graph : 
-    parents : Vec<Option<usize>>
+    parents : Vec<Option<usize>>,
+    active : Vec<bool>
 }
 
 impl World
@@ -698,7 +739,8 @@ impl World
             id : id,
             name : name,
             data : box Data::new(),
-            parents :vec![]
+            parents :vec![],
+            active :vec![]
         }
     }
 
@@ -741,14 +783,19 @@ impl World
         }
     }
 
-    pub fn add_entity(&mut self, name : String) -> Entity {
-        let id = self.entities.len();
+    pub fn add_entity(&mut self, e : Entity, p : Option<usize>) {
+        //TODO check
         self.entities_comps.push(HashMap::new());
-        let e = Entity::new(id, name);
-        self.entities.push(e.clone());
-        e
+        self.entities.push(e);
+        self.parents.push(p);
     }
 
+    pub fn create_entity(&mut self, name : String) -> Entity {
+        let id = self.entities.len();
+        Entity::new(id, name)
+    }
+
+    /*
     fn add_entity_world(&mut self, name : String) -> EntityWorldMut {
         let id = self.entities.len();
         self.entities_comps.push(HashMap::new());
@@ -756,11 +803,12 @@ impl World
         self.entities.push(e.clone());
         EntityWorldMut::new(id, self)
     }
+    */
 
 
-    fn add_comp<T : Component + Any>(&mut self, e : &Entity, data : &mut Data)
+    pub fn add_comp<T : Component + Any>(&mut self, e : &Entity)
     {
-        if let Some(c) = data.add::<T>() {
+        if let Some(c) = self.data.add::<T>() {
             self.entities_comps[e.id].insert(T::ID.to_owned(), c);
             self.owners.set_owner::<T>(c, e.id);
         }
@@ -770,9 +818,9 @@ impl World
         }
     }
 
-    fn add<'a,T : Component + Any>(&mut self, e : &Entity, data : &'a mut Data) -> Option<&'a mut T>
+    fn add<'a, T : Component + Any>(&'a mut self, e : &Entity) -> Option<&'a mut T>
     {
-        if let Some((id,c)) = data.add_and_return::<T>() {
+        if let Some((id,c)) = self.data.add_and_return::<T>() {
             self.entities_comps[e.id].insert(T::ID.to_owned(), id);
             self.owners.set_owner::<T>(id, e.id);
             Some(c)
@@ -784,9 +832,9 @@ impl World
         }
     }
 
-    fn add_usize<'a,T : Component + Any>(&mut self, e : usize, data : &'a mut Data) -> Option<&'a mut T>
+    fn add_usize<'a,T : Component + Any>(&'a mut self, e : usize) -> Option<&'a mut T>
     {
-        if let Some((id,c)) = data.add_and_return::<T>() {
+        if let Some((id,c)) = self.data.add_and_return::<T>() {
             self.entities_comps[e].insert(T::ID.to_owned(), id);
             self.owners.set_owner::<T>(id, e);
             Some(c)
@@ -800,20 +848,20 @@ impl World
 
 
 
-    fn get_comp<'a, T:Component + Any>(&self, data : &'a Data, e : EntityRef) -> Option<&'a T>
+    fn get_comp<'a, T:Component + Any>(&'a self, e : EntityRef) -> Option<&'a T>
     {
         if let Some(v) = self.entities_comps[e.id].get(T::ID) {
-            data.get::<T>(*v)
+            self.data.get::<T>(*v)
         }
         else {
             None
         }
     }
 
-    pub fn get_comp_mut<'a, T:Component + Any>(&self, data : &'a mut Data, e : &EntityMut) -> Option<&'a mut T>
+    pub fn get_comp_mut<'a, T:Component + Any>(&'a mut self, e : &EntityMut) -> Option<&'a mut T>
     {
         if let Some(v) = self.entities_comps[e.id].get(T::ID) {
-            data.get_mut::<T>(*v)
+            self.data.get_mut::<T>(*v)
         }
         else {
             None
@@ -854,9 +902,26 @@ impl World
         Entities::new(v.iter().map(|x| EntityRef::new(*x)).collect())
     }
 
-    pub fn get_world_transform(&self, e : &Entity) -> Transform
+    pub fn get_transform(&self, e : EntityRef) -> Transform
     {
-        Default::default()
+        self.get_comp::<Transform>(e).unwrap().clone()
+    }
+
+    pub fn get_world_transform(&self, e : EntityRef) -> Transform
+    {
+        if let Some(ref p) = self.parents[e.id] {
+            self.get_world_transform(EntityRef::new(*p)) * self.get_transform(e)
+        }
+        else {
+            self.get_transform(e)
+        }
+    }
+
+    pub fn add_entities(&mut self, parents : &[Option<usize>], obs : &[Entity])
+    {
+        for (o, p) in obs.iter().zip(parents.iter()) {
+            self.add_entity(o.clone(), *p);
+        }
     }
 
 }

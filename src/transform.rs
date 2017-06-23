@@ -248,3 +248,16 @@ impl fmt::Debug for Orientation
     }
 }
 
+impl Mul<Transform> for Transform {
+    type Output = Transform;
+    fn mul(self, other: Transform) -> Transform {
+        let ori = self.orientation* other.orientation;
+        let scale = self.scale * other.scale;
+        let rotated_other_position = self.orientation.rotate_vec3(&other.position);
+        let pos = self.position + rotated_other_position;
+
+        Transform::from_position_orientation_scale(pos, ori, scale)
+    }
+}
+
+
