@@ -429,7 +429,7 @@ impl Data {
         }
     }
 
-    fn get<T:Component + Any>(&self, index : usize) -> Option<&T>
+    pub fn get<T:Component + Any>(&self, index : usize) -> Option<&T>
     {
         /*
         match T::ID {
@@ -670,7 +670,7 @@ pub struct World {
     pub name : String,
     pub id : usize,
     entities : Vec<Entity>,
-    data : Box<Data>,
+    pub data : Box<Data>,
     pub entities_comps : Vec<HashMap<String, usize>>,
     //maybe it is better to do this? :
     //pub entities_comps : Vec<Option<usize>>, or Vec<Vec<usize>> if multiples components are possible
@@ -682,7 +682,10 @@ pub struct World {
     //  ...
     //  all components... : Option<usize>
     // }
-    owners : DataOwners
+    owners : DataOwners,
+
+    //graph : 
+    parents : Vec<Option<usize>>
 }
 
 impl World
@@ -694,7 +697,8 @@ impl World
             owners : DataOwners::new(),
             id : id,
             name : name,
-            data : box Data::new()
+            data : box Data::new(),
+            parents :vec![]
         }
     }
 
@@ -848,6 +852,11 @@ impl World
 
         //Entities::new(EntityRef::new(v))
         Entities::new(v.iter().map(|x| EntityRef::new(*x)).collect())
+    }
+
+    pub fn get_world_transform(&self, e : &Entity) -> Transform
+    {
+        Default::default()
     }
 
 }
