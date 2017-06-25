@@ -6,6 +6,12 @@ use std::any::{Any, TypeId};
 use std::default::Default;
 use std::cell::Cell;
 use serde;
+use serde_json;
+
+use std::fs::File;
+use std::io::{Read,Write};
+use std::path::Path;
+//use std::fmt;
 
 use ::{render,vec,matrix,camera2,mesh,resource,shader,material};
 use transform::Transform;
@@ -134,6 +140,16 @@ impl Entity {
             name : name,
             data : Data::new(),
             index : Cell::new(None)
+        }
+    }
+
+    pub fn from_ref(e : &EntityRef) -> Entity
+    {
+        Entity {
+            id : e.id,
+            name : "no name".to_owned(),
+            data : Data::new(),
+            index : Cell::new(Some(e.index))
         }
     }
 
@@ -804,7 +820,7 @@ impl DataOwners {
 pub struct World {
     pub name : String,
     pub id : usize,
-    entities : Vec<EntityRef>,
+    pub entities : Vec<EntityRef>,
     pub data : Box<Data>,
     pub entities_comps : Vec<HashMap<String, usize>>,
     //maybe it is better to do this? :
@@ -836,6 +852,20 @@ impl World
             data : box Data::new(),
             parents :vec![],
             active :vec![]
+        }
+    }
+
+    pub fn new_from_file(file_path : &str, id : usize) -> World
+    {
+        let mut file = String::new();
+        match File::open(&Path::new(file_path)){
+            Ok(mut f) => {
+                f.read_to_string(&mut file);
+                let mut world : World = serde_json::from_str(&file).unwrap();
+
+                world
+            },
+            _ => World::new(file_path.to_owned(), id)
         }
     }
 
