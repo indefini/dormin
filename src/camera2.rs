@@ -13,7 +13,7 @@ use camera;
 
 //extern crate serde_json;
 
-#[derive(Clone,Serialize,Deserialize)]
+#[derive(Clone,Serialize,Deserialize, Debug)]
 pub enum Projection
 {
     Perspective,
@@ -30,7 +30,7 @@ impl Projection {
     }
 }
 
-#[derive(Clone,Serialize,Deserialize)]
+#[derive(Clone,Serialize,Deserialize,Debug)]
 pub struct Camera
 {
     fovy : f64,

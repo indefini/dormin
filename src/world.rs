@@ -4,6 +4,7 @@ use std::collections::hash_map::Entry::{Occupied,Vacant};
 use std::cell::UnsafeCell;
 use std::any::{Any, TypeId};
 use std::default::Default;
+use std::cell::Cell;
 use serde;
 
 use ::{render,vec,matrix,camera2,mesh,resource,shader,material};
@@ -11,18 +12,21 @@ use transform::Transform;
 use camera2::Camera;
 use component::mesh_render::MeshRender;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Entity
 {
     pub id : usize,
     pub name : String,
-    data : Data
+    pub data : Data,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub index : Cell<Option<usize>>
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct EntityRef
 {
-    id : usize
+    id : usize,
+    index : usize
 }
 
 pub struct EntityWorld<'a>
@@ -63,7 +67,7 @@ impl<'a> EntityWorld<'a>
     fn get_comp<T:Component + Any>(self) -> Option<&'a T>
     {
         if let Some(v) = self.world.entities_comps[self.id].get(T::ID) {
-            let op : Option<&'a T> = self.world.data.get::<T>(*v);
+            let op : Option<&'a T> = self.world.data.get_with_index::<T>(*v);
             op
         }
         else {
@@ -98,9 +102,10 @@ impl<'a> EntityWorldMut<'a>
 
 
 impl EntityRef {
-    fn new(id : usize) -> EntityRef {
+    pub fn new(id : usize, index : usize) -> EntityRef {
         EntityRef {
-            id : id
+            id : id,
+            index : index
         }
     }
 }
@@ -127,13 +132,27 @@ impl Entity {
         Entity {
             id : id,
             name : name,
-            data : Data::new()
+            data : Data::new(),
+            index : Cell::new(None)
         }
     }
 
-    fn to_ref(&self) -> EntityRef {
+    pub fn to_ref(&self) -> Option<EntityRef> {
+        if let Some(index) = self.index.get() {
+            Some(EntityRef {
+                id : self.id,
+                index : index
+            })
+        }
+        else {
+            None
+        }
+    }
+
+    pub fn to_ref_with_index(&self, index : usize) -> EntityRef {
         EntityRef {
-            id : self.id
+            id : self.id,
+            index : index
         }
     }
 
@@ -143,6 +162,7 @@ impl Entity {
         }
     }
 
+    //entity.add_comp
     pub fn add_comp<T : Component + Any>(&mut self)
     {
         if self.data.add::<T>().is_none() {
@@ -150,19 +170,31 @@ impl Entity {
         }
     }
 
+    pub fn add_comp_return<'a, T : Component + Any>(&'a mut self) -> Option<&'a mut T>
+    {
+        if let Some((id,c)) = self.data.add_and_return::<T>() {
+            Some(c)
+        }
+        else
+        {
+            println!("cannot add {}", T::ID);
+            None
+        }
+    }
+
 }
 
-#[derive(Serialize,Deserialize, Clone)]
+#[derive(Serialize,Deserialize, Clone, Debug)]
 pub struct Human {
     speed : f64
 }
 
-#[derive(Serialize,Deserialize, Clone)]
+#[derive(Serialize,Deserialize, Clone, Debug)]
 pub struct Zombie {
     speed : f64
 }
 
-#[derive(Serialize,Deserialize, Clone)]
+#[derive(Serialize,Deserialize, Clone, Debug)]
 pub struct Weapon;
 
 pub trait WorldChange {
@@ -447,14 +479,14 @@ impl EntityRep
 }
 
 
-#[derive(Serialize,Deserialize, Clone)]
+#[derive(Serialize,Deserialize, Clone, Debug)]
 pub struct Data {
     transform : Vec<Transform>,
     human : Vec<Human>,
     zombie : Vec<Zombie>,
     weapon : Vec<Weapon>,
     camera : Vec<Camera>,
-    mesh_render : Vec<MeshRender>
+    pub mesh_render : Vec<MeshRender>
 }
 
 impl Data {
@@ -469,7 +501,55 @@ impl Data {
         }
     }
 
-    pub fn get<T:Component + Any>(&self, index : usize) -> Option<&T>
+    pub fn get_one<T:Component + Any>(&self) -> Option<&T>
+    {
+        let tt = TypeId::of::<T>();
+
+        if tt == TypeId::of::<Transform>() && !self.transform.is_empty()  {
+            self.transform[0].as_any().downcast_ref::<T>()
+        }
+        else if tt == TypeId::of::<Human>() && !self.human.is_empty() {
+            self.human[0].as_any().downcast_ref::<T>()
+        }
+        else if tt == TypeId::of::<Zombie>() && !self.zombie.is_empty() {
+            self.zombie[0].as_any().downcast_ref::<T>()
+        }
+        else if tt == TypeId::of::<Weapon>() && !self.weapon.is_empty() {
+            self.weapon[0].as_any().downcast_ref::<T>()
+        }
+        else if tt == TypeId::of::<MeshRender>() && !self.mesh_render.is_empty() {
+            self.mesh_render[0].as_any().downcast_ref::<T>()
+        }
+        else {
+            None
+        }
+    }
+
+    pub fn get_one_mut<T:Component + Any>(&mut self) -> Option<&mut T>
+    {
+        let tt = TypeId::of::<T>();
+
+        if tt == TypeId::of::<Transform>() && !self.transform.is_empty()  {
+            self.transform[0].as_any_mut().downcast_mut::<T>()
+        }
+        else if tt == TypeId::of::<Human>() && !self.human.is_empty() {
+            self.human[0].as_any_mut().downcast_mut::<T>()
+        }
+        else if tt == TypeId::of::<Zombie>() && !self.zombie.is_empty() {
+            self.zombie[0].as_any_mut().downcast_mut::<T>()
+        }
+        else if tt == TypeId::of::<Weapon>() && !self.weapon.is_empty() {
+            self.weapon[0].as_any_mut().downcast_mut::<T>()
+        }
+        else if tt == TypeId::of::<MeshRender>() && !self.mesh_render.is_empty() {
+            self.mesh_render[0].as_any_mut().downcast_mut::<T>()
+        }
+        else {
+            None
+        }
+    }
+
+    fn get_with_index<T:Component + Any>(&self, index : usize) -> Option<&T>
     {
         /*
         match T::ID {
@@ -493,12 +573,15 @@ impl Data {
         else if tt == TypeId::of::<Weapon>() {
             self.weapon[index].as_any().downcast_ref::<T>()
         }
+        else if tt == TypeId::of::<MeshRender>() {
+            self.mesh_render[index].as_any().downcast_ref::<T>()
+        }
         else {
             None
         }
     }
 
-    fn get_mut<T:Component + Any>(&mut self, index : usize) -> Option<&mut T>
+    fn get_with_index_mut<T:Component + Any>(&mut self, index : usize) -> Option<&mut T>
     {
         let tt = TypeId::of::<T>();
 
@@ -513,6 +596,9 @@ impl Data {
         }
         else if tt == TypeId::of::<Weapon>() {
             self.weapon[index].as_any_mut().downcast_mut::<T>()
+        }
+        else if tt == TypeId::of::<MeshRender>() {
+            self.mesh_render[index].as_any_mut().downcast_mut::<T>()
         }
         else {
             None
@@ -562,7 +648,7 @@ impl Data {
         }
     }
 
-    fn get_comp(&self, name : &str, index : usize) -> Option<&Component>
+    fn get_comp_with_name_index(&self, name : &str, index : usize) -> Option<&Component>
     {
         match name {
             "human" => Some(&self.human[index]),
@@ -573,7 +659,7 @@ impl Data {
         }
     }
 
-    fn get_comp_mut(&mut self, name : &str, index : usize) -> Option<&mut Component>
+    fn get_comp_mut_with_name_index(&mut self, name : &str, index : usize) -> Option<&mut Component>
     {
         match name {
             "human" => Some(&mut self.human[index]),
@@ -586,7 +672,7 @@ impl Data {
         }
     }
 
-    fn get_comp_mut_ptr(&mut self, name : &str, e : &EntityMut, index : usize) -> Option<*mut Component>
+    fn get_comp_mut_ptr_with_name_index(&mut self, name : &str, e : &EntityMut, index : usize) -> Option<*mut Component>
     {
         println!("Data, get_comp_mut_ptr : {}", name);
         match name {
@@ -616,6 +702,9 @@ impl Data {
             else if tt == TypeId::of::<Weapon>() {
                 &mut self.weapon
             }
+            else if tt == TypeId::of::<MeshRender>() {
+                &mut self.mesh_render
+            }
             else {
                 return None;
             };
@@ -640,6 +729,9 @@ impl Data {
             else if tt == TypeId::of::<Weapon>() {
                 &mut self.weapon
             }
+            else if tt == TypeId::of::<MeshRender>() {
+                &mut self.mesh_render
+            }
             else {
                 return None;
             };
@@ -657,7 +749,7 @@ pub struct DataOwners {
     weapon : Vec<usize>,
     transform : Vec<usize>,
     camera : Vec<usize>,
-    mesh_render : Vec<usize>,
+    pub mesh_render : Vec<usize>,
 }
 
 impl DataOwners {
@@ -691,6 +783,9 @@ impl DataOwners {
         else if tt == TypeId::of::<camera2::Camera>() {
             &mut self.weapon
         }
+        else if tt == TypeId::of::<MeshRender>() {
+            &mut self.mesh_render
+        }
         else {
             panic!("no such component : {}", T::ID);
         };
@@ -709,7 +804,7 @@ impl DataOwners {
 pub struct World {
     pub name : String,
     pub id : usize,
-    entities : Vec<Entity>,
+    entities : Vec<EntityRef>,
     pub data : Box<Data>,
     pub entities_comps : Vec<HashMap<String, usize>>,
     //maybe it is better to do this? :
@@ -722,7 +817,7 @@ pub struct World {
     //  ...
     //  all components... : Option<usize>
     // }
-    owners : DataOwners,
+    pub owners : DataOwners,
 
     //graph : 
     parents : Vec<Option<usize>>,
@@ -775,7 +870,7 @@ impl World
             let e = EntityMut::new(id);
             //let ew = EntityWorld::new(id,self);
             for (s, c_id) in entity_comps {
-                if let Some(c) = self.data.get_comp_mut_ptr(&s, &e, c_id) {
+                if let Some(c) = self.data.get_comp_mut_ptr_with_name_index(&s, &e, c_id) {
                     //unsafe { (*c).update_entity_world(&ew, self); }
                     unsafe { (*c).update(&e, self); }
                 }
@@ -783,11 +878,30 @@ impl World
         }
     }
 
-    pub fn add_entity(&mut self, e : Entity, p : Option<usize>) {
+    pub fn add_entity(&mut self, e : &Entity, p : Option<usize>) {
+        println!("added the entity!!!!!!!!!!!");
         //TODO check
+        let index = self.entities.len();
+        e.index.set(Some(index));
         self.entities_comps.push(HashMap::new());
-        self.entities.push(e);
+        self.entities.push(e.to_ref_with_index(index));
         self.parents.push(p);
+
+        for i in &e.data.transform {
+            let dex = self.data.transform.len();
+            self.data.transform.push(i.clone());
+            self.owners.transform.push(index);
+            self.entities_comps[index].insert(Transform::ID.to_owned(), dex);
+        }
+
+        for i in &e.data.mesh_render {
+            let dex = self.data.mesh_render.len();
+            self.data.mesh_render.push(i.clone());
+            self.owners.mesh_render.push(index);
+            self.entities_comps[index].insert(MeshRender::ID.to_owned(), dex);
+        }
+
+
     }
 
     pub fn create_entity(&mut self, name : String) -> Entity {
@@ -806,6 +920,7 @@ impl World
     */
 
 
+    //world add_comp
     pub fn add_comp<T : Component + Any>(&mut self, e : &Entity)
     {
         if let Some(c) = self.data.add::<T>() {
@@ -818,7 +933,7 @@ impl World
         }
     }
 
-    fn add<'a, T : Component + Any>(&'a mut self, e : &Entity) -> Option<&'a mut T>
+    fn add_comp_return<'a, T : Component + Any>(&'a mut self, e : &Entity) -> Option<&'a mut T>
     {
         if let Some((id,c)) = self.data.add_and_return::<T>() {
             self.entities_comps[e.id].insert(T::ID.to_owned(), id);
@@ -848,10 +963,10 @@ impl World
 
 
 
-    fn get_comp<'a, T:Component + Any>(&'a self, e : EntityRef) -> Option<&'a T>
+    pub fn get_comp<'a, T:Component + Any>(&'a self, e : EntityRef) -> Option<&'a T>
     {
-        if let Some(v) = self.entities_comps[e.id].get(T::ID) {
-            self.data.get::<T>(*v)
+        if let Some(v) = self.entities_comps[e.index].get(T::ID) {
+            self.data.get_with_index::<T>(*v)
         }
         else {
             None
@@ -861,7 +976,7 @@ impl World
     pub fn get_comp_mut<'a, T:Component + Any>(&'a mut self, e : &EntityMut) -> Option<&'a mut T>
     {
         if let Some(v) = self.entities_comps[e.id].get(T::ID) {
-            self.data.get_mut::<T>(*v)
+            self.data.get_with_index_mut::<T>(*v)
         }
         else {
             None
@@ -899,7 +1014,8 @@ impl World
         };
 
         //Entities::new(EntityRef::new(v))
-        Entities::new(v.iter().map(|x| EntityRef::new(*x)).collect())
+        //Entities::new(v.iter().map(|x| EntityRef::new(*x)).collect())
+        Entities::new(v.iter().map(|x| self.entities[*x].clone()).collect())
     }
 
     pub fn get_transform(&self, e : EntityRef) -> Transform
@@ -909,8 +1025,8 @@ impl World
 
     pub fn get_world_transform(&self, e : EntityRef) -> Transform
     {
-        if let Some(ref p) = self.parents[e.id] {
-            self.get_world_transform(EntityRef::new(*p)) * self.get_transform(e)
+        if let Some(ref p) = self.parents[e.index] {
+            self.get_world_transform(self.entities[*p].clone()) * self.get_transform(e)
         }
         else {
             self.get_transform(e)
@@ -920,8 +1036,20 @@ impl World
     pub fn add_entities(&mut self, parents : &[Option<usize>], obs : &[Entity])
     {
         for (o, p) in obs.iter().zip(parents.iter()) {
-            self.add_entity(o.clone(), *p);
+            self.add_entity(o, *p);
         }
+    }
+
+    pub fn find(&self, e : &Entity) -> Option<EntityRef>
+    {
+        for (index, i) in self.entities.iter().enumerate() {
+            if e.id == i.id {
+                e.index.set(Some(index));
+                return Some(i.clone());
+            }
+        }
+
+        None
     }
 
 }
