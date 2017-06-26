@@ -114,12 +114,20 @@ impl EntityRef {
             index : index
         }
     }
+
+    pub fn to_mut(&self) -> EntityMut {
+        EntityMut {
+            id : self.id,
+            index : self.index
+        }
+    }
 }
 
 impl EntityMut {
-    fn new(id : usize) -> EntityMut {
+    fn new(id : usize, index : usize) -> EntityMut {
         EntityMut {
-            id : id
+            id : id,
+            index : index
         }
     }
 }
@@ -127,7 +135,8 @@ impl EntityMut {
 
 pub struct EntityMut
 {
-    pub id : usize
+    pub id : usize,
+    index : usize
 }
 
 
@@ -165,6 +174,18 @@ impl Entity {
         }
     }
 
+    pub fn to_mut(&self) -> Option<EntityMut> {
+        if let Some(index) = self.index.get() {
+            Some(EntityMut {
+                id : self.id,
+                index : index
+            })
+        }
+        else {
+            None
+        }
+    }
+
     pub fn to_ref_with_index(&self, index : usize) -> EntityRef {
         EntityRef {
             id : self.id,
@@ -172,9 +193,10 @@ impl Entity {
         }
     }
 
-    pub fn to_mut(&self) -> EntityMut {
+    pub fn to_mut_with_index(&self, index : usize) -> EntityMut {
         EntityMut {
-            id : self.id
+            id : self.id,
+            index : index
         }
     }
 
@@ -897,7 +919,8 @@ impl World
         //for (id, entity_comps) in self.entities_comps.iter().enumerate() {
         for id in 0..self.entities_comps.len() {
             let entity_comps = self.entities_comps[id].clone();
-            let e = EntityMut::new(id);
+            //let e = EntityMut::new(id);
+            let e = self.entities[id].to_mut();
             //let ew = EntityWorld::new(id,self);
             for (s, c_id) in entity_comps {
                 if let Some(c) = self.data.get_comp_mut_ptr_with_name_index(&s, &e, c_id) {
@@ -1083,6 +1106,17 @@ impl World
     }
 
     pub fn find_with_id(&self, id : usize) -> Option<EntityRef>
+    {
+        for e in self.entities.iter() {
+            if e.id == id {
+                return Some(e.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn find_with_id_mut(&mut self, id : usize) -> Option<EntityRef>
     {
         for e in self.entities.iter() {
             if e.id == id {

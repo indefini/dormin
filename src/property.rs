@@ -712,6 +712,7 @@ property_set_impl!(object::Object,[name,position,orientation,scale,comp_data,com
 property_set_impl!(scene::Scene,[name,camera]);
 property_set_impl!(camera::Camera,[data]);
 property_set_impl!(camera::CameraData,[far,near]);
+property_set_impl!(transform::Transform,[position,orientation,scale]);
 
 property_set_impl!(world::World,[]);
 
