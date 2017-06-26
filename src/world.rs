@@ -1082,6 +1082,17 @@ impl World
         None
     }
 
+    pub fn find_with_id(&self, id : usize) -> Option<EntityRef>
+    {
+        for e in self.entities.iter() {
+            if e.id == id {
+                return Some(e.clone());
+            }
+        }
+
+        None
+    }
+
 }
 
 #[derive(Clone)]
