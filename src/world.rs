@@ -686,6 +686,7 @@ impl Data {
         }
     }
 
+    /*
     fn get_comp_with_name_index(&self, name : &str, index : usize) -> Option<&Component>
     {
         match name {
@@ -721,7 +722,7 @@ impl Data {
             _ => None
         }
     }
-
+    */
 
     fn add<T:Component + Any>(&mut self) -> Option<usize>
     {
@@ -917,6 +918,7 @@ impl World
         */
 
         //for (id, entity_comps) in self.entities_comps.iter().enumerate() {
+        /*
         for id in 0..self.entities_comps.len() {
             let entity_comps = self.entities_comps[id].clone();
             //let e = EntityMut::new(id);
@@ -929,6 +931,35 @@ impl World
                 }
             }
         }
+        */
+
+        /*
+        for (i, t) in &mut self.data.transform.iter_mut().enumerate() {
+            let o = self.owners.transform[i];
+            //let e = EntityMut::new(o);
+            let e = self.entities[o].to_mut();
+            t.update(&e, self);
+        }
+        */
+
+        for i in 0..self.data.transform.len() {
+            let o = self.owners.transform[i];
+            //let e = EntityMut::new(o);
+            let e = self.entities[o].to_mut();
+            let t : *mut Transform = (&mut self.data.transform[i]) as *mut Transform;
+            unsafe { (*t).update(&e, self); }
+        }
+
+        for i in 0..self.data.zombie.len() {
+            let o = self.owners.zombie[i];
+            //let e = EntityMut::new(o);
+            let e = self.entities[o].to_mut();
+            let t : *mut Zombie = (&mut self.data.zombie[i]) as *mut Zombie;
+            unsafe { (*t).update(&e, self); }
+        }
+
+        //etc...
+
     }
 
     pub fn add_entity(&mut self, e : &Entity, p : Option<usize>) {
