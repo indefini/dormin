@@ -507,6 +507,14 @@ impl Object
             self.scale)
     }
 
+    pub fn make_world_transform(&self) -> transform::Transform
+    {
+        transform::Transform::from_position_orientation_scale(
+            self.world_position(),
+            transform::Orientation::Quat(self.world_orientation()),
+            self.world_scale())
+    }
+
 }
 
 pub fn child_add(parent : Arc<RwLock<Object>>, child : Arc<RwLock<Object>>)

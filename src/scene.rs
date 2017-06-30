@@ -451,7 +451,7 @@ impl Scene
         None
     }
 
-    pub fn find_object_by_id(&self, id : &Uuid) -> Option<Arc<RwLock<object::Object>>>
+    pub fn find_object_with_id(&self, id : &Uuid) -> Option<Arc<RwLock<object::Object>>>
     {
         fn find(list : &[Arc<RwLock<object::Object>>], id : &Uuid) ->
             Option<Arc<RwLock<object::Object>>>
@@ -517,7 +517,7 @@ impl Scene
                 return_list.push(None);
             }
             else {
-                return_list.push(self.find_object_by_id(i));
+                return_list.push(self.find_object_with_id(i));
             }
         }
 
@@ -530,7 +530,7 @@ impl Scene
         let pvec : Vec<Option<Arc<RwLock<object::Object>>>> = 
             parents.iter().map(
                 |x| if let Some(ref y) = *x {
-                    self.find_object_by_id(y)
+                    self.find_object_with_id(y)
                 } 
                 else {
                     None
@@ -557,7 +557,7 @@ impl Scene
         let pvec : Vec<Option<Arc<RwLock<object::Object>>>> = 
             parents.iter().map(
                 |x| if let Some(ref y) = *x {
-                    self.find_object_by_id(y)
+                    self.find_object_with_id(y)
                 } 
                 else {
                     None

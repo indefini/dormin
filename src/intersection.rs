@@ -46,6 +46,21 @@ impl<'a> MeshTransform<'a>
             scale : transform.scale
         }
     }
+
+    pub fn with_pos_ori_scale(
+        mesh : &'a mesh::Mesh,
+        pos : vec::Vec3,
+        ori : vec::Quat,
+        scale : vec::Vec3,
+        ) -> MeshTransform<'a>
+    {
+        MeshTransform {
+            mesh : mesh,
+            position : pos,
+            orientation : ori,
+            scale : scale
+        }
+    }
 }
 
 pub fn ray_mesh_transform(

@@ -154,6 +154,12 @@ impl MeshRender{
             material : ResTT::new_with_instance("none", material),
         }
     }
+
+    pub fn set_with_names(&mut self, mesh : &str, material : &str)
+    {
+        self.mesh = resource::ResTT::new(mesh);
+        self.material = resource::ResTT::new(material);
+    }
 }
 
 property_set_impl!(MeshRender,[mesh,material]);

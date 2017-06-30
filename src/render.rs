@@ -661,6 +661,7 @@ impl Render {
 
         self.clean_passes();
         self.add_objects_to_passes(camera, objects);
+        println!("OOOOBBBB :::::::::::::: {}", objects2.len());
         //self.prepare_passes_objects_per_mmr(camera, objects2);
         self.add_mmr(camera, objects2);
         self.add_mmr(camera, cameras);
@@ -742,6 +743,7 @@ impl Render {
         //*/
 
         let sel_len = selected2.len();
+        println!("selllll :::::::::::::: {}", sel_len);
 
         if sel_len > 0 {
             let mut l = Vec::new();
@@ -763,6 +765,7 @@ impl Render {
             //ld.push_back(self.dragger.clone());
             //self.prepare_passes_objects_per(ld);
             //self.prepare_passes_objects_per(draggers);
+            println!("dragger :::::::::::::: {}", draggers2.len());
             self.prepare_passes_objects_per_mmr(camera, draggers2);
 
 
