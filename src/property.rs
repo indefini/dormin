@@ -1,6 +1,5 @@
 use object;
 use scene;
-use world;
 use camera;
 use vec;
 use std::any::{Any};//, AnyRefExt};
@@ -20,13 +19,13 @@ use std::sync::{Arc, RwLock};
 
 pub trait PropertyRead
 {
-  fn get_property(&self) -> Option<Box<Any>>;
+  fn get_property_read(&self) -> Option<Box<Any>>;
   //fn get_some() -> Option<Self>;
 }
 
 impl<T:Any+Clone> PropertyRead for T
 {
-  fn get_property(&self) -> Option<Box<Any>>
+  fn get_property_read(&self) -> Option<Box<Any>>
   {
       Some(box self.clone())
   }
@@ -35,7 +34,7 @@ impl<T:Any+Clone> PropertyRead for T
 /*
 impl<T:Any> PropertyRead for resource::ResTT<T>
 {
-  fn get_property(&self) -> Option<Box<Any>>
+  fn get_property_read(&self) -> Option<Box<Any>>
   {
       Some(box self.clone())
   }
@@ -46,7 +45,7 @@ macro_rules! property_read_impl(
 
         impl PropertyRead for $my_type
         {
-            fn get_property(&self) -> Option<Box<Any>>
+            fn get_property_read(&self) -> Option<Box<Any>>
             {
                 Some(box self.clone())
             }
@@ -81,7 +80,7 @@ impl PropertyGet for usize {}
 /*
 impl<T:Any+Clone> PropertyRead for Option<T>
 {
-  fn get_property(&self) -> Option<Box<Any>>
+  fn get_property_read(&self) -> Option<Box<Any>>
   {
       match *self {
           Some(ref s) => {
@@ -217,7 +216,7 @@ impl<T:PropertyGet+PropertyRead> PropertyGet for Vec<T> {
           0 => {None},
           1 => {
               let index = v[0].parse::<usize>().unwrap();
-              self[index].get_property()
+              self[index].get_property_read()
           },
           _ => {
               let yep : String = v[1..].join("/");
@@ -578,7 +577,7 @@ fn join_string(path : &Vec<String>) -> String
 #[macro_export]
 macro_rules! property_set_impl(
     ($my_type:ty, [ $($member:ident),* ]) => (
-        impl PropertyWrite for $my_type
+        impl $crate::property::PropertyWrite for $my_type
         {
             fn test_set_property(&mut self, value: &Any)
             {
@@ -617,7 +616,7 @@ macro_rules! property_set_impl(
                 }
             }
 
-            fn set_property_hier(&mut self, name : &str, value: WriteValue)
+            fn set_property_hier(&mut self, name : &str, value: $crate::property::WriteValue)
             {
                 let mut v : Vec<&str> = name.split('/').collect();
                 //TODO remove this?
@@ -714,12 +713,11 @@ property_set_impl!(camera::Camera,[data]);
 property_set_impl!(camera::CameraData,[far,near]);
 property_set_impl!(transform::Transform,[position,orientation,scale]);
 
-property_set_impl!(world::World,[]);
 
 #[macro_export]
 macro_rules! property_get_impl(
     ($my_type:ty, [ $($member:ident),* ]) => (
-        impl PropertyGet for $my_type
+        impl $crate::property::PropertyGet for $my_type
         {
             fn get_property_hier(&self, name : &str) -> Option<Box<Any>>
             {
@@ -729,12 +727,14 @@ macro_rules! property_get_impl(
                     v = v[1..].to_vec();
                 }
 
+                use $crate::property::PropertyRead;
+
                 match v.len() {
                     0 => {None},
                     1 => {
                         match v[0] {
                             $(
-                                stringify!($member) => self.$member.get_property(),
+                                stringify!($member) => self.$member.get_property_read(),
                                 )*
                                 _ => {
                                     println!("1111 no such member, name : {}", v[0]);
@@ -771,5 +771,3 @@ property_get_impl!(scene::Scene,[name,camera]);
 property_get_impl!(camera::Camera,[data]);
 property_get_impl!(camera::CameraData,[far,near]);
 
-property_get_impl!(world::World,[]);
-property_get_impl!(world::Entity,[name,id]);
