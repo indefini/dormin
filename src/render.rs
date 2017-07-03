@@ -83,17 +83,7 @@ impl MatrixMeshRender {
 struct CameraPass
 {
     matrix : matrix::Matrix4,
-    //TODO remove objects from here
-    // we need : transform = worldmatrix, mesh_render = mesh + material, 
-    // mesh and material can be instances...
-    objects : Vec<Arc<RwLock<object::Object>>>,
     mmr : Vec<MatrixMeshRender>,
-
-    /*
-    transform : Vec<usize>,
-    mesh : Vec<ResTT<mesh::Mesh>>,
-    material : Vec<ResTT<material::Material>>,
-    */
 }
 
 impl CameraPass
@@ -102,14 +92,8 @@ impl CameraPass
     {
         CameraPass {
             matrix : mat,
-            objects : Vec::new(),
             mmr : Vec::new()
         }
-    }
-
-    fn add_object(&mut self, o : Arc<RwLock<object::Object>>)
-    {
-        self.objects.push(o);
     }
 
     fn add_mmr(&mut self, mr : MatrixMeshRender)
@@ -163,19 +147,6 @@ impl RenderPass
         let mut not_loaded = 0;
 
         for (_,p) in self.passes.iter() {
-
-            for o in p.objects.iter() {
-                let mut ob = o.write().unwrap();
-                let not = self.draw_object(
-                    shader,
-                    &mut *ob,
-                    &p.matrix,
-                    resource,
-                    load.clone()
-                    );
-
-                not_loaded += not;
-            }
 
             for m in p.mmr.iter() {
                 let not = self.draw_mmr(
@@ -481,6 +452,8 @@ impl Render {
     }
 
 
+    //TODO draw armature
+    /*
     fn add_objects_to_passes(
         &mut self,
         camera : &CameraIdMat,
@@ -526,26 +499,7 @@ impl Render {
             };
         }
     }
-
-    fn prepare_passes_selected(
-        &mut self,
-        camera : &CameraIdMat,
-        objects : &[Arc<RwLock<object::Object>>])
-    {
-        for (_,p) in self.passes.iter_mut()
-        {
-            p.passes.clear();
-        }
-
-        for o in objects {
-            prepare_passes_object(
-                o.clone(),
-                &mut self.passes,
-                &mut self.resource.material_manager.borrow_mut(),
-                &mut self.resource.shader_manager.borrow_mut(),
-                camera);
-        }
-    }
+    */
 
     fn prepare_passes_objects_ortho(&mut self, list : &[Arc<RwLock<object::Object>>])
     {
@@ -567,6 +521,7 @@ impl Render {
         }
     }
 
+/*
     fn prepare_passes_objects_per(
         &mut self,
         camera : &CameraIdMat,
@@ -588,6 +543,7 @@ impl Render {
                 camera);
         }
     }
+    */
 
     fn prepare_passes_objects_per_mmr(
         &mut self,
@@ -629,20 +585,16 @@ impl Render {
     pub fn draw(
         &mut self,
         camera : &CameraIdMat,
-        objects : &[Arc<RwLock<object::Object>>],
-        objects2 : &[MatrixMeshRender],
+        objects : &[MatrixMeshRender],
         cameras : &[MatrixMeshRender],
-        selected : &[Arc<RwLock<object::Object>>],
-        selected2 : &[MatrixMeshRender],
-        draggers2 : &[MatrixMeshRender],
+        selected : &[MatrixMeshRender],
+        draggers : &[MatrixMeshRender],
         on_finish : &Fn(bool),
         load : Arc<Mutex<usize>>
         ) -> usize
     {
         let mut not_loaded = 0;
-        //self.prepare_passes_selected(camera, selected);
-        self.prepare_passes_objects_per_mmr(camera, selected2);
-        //self.fbo_selected.read().unwrap().cgl_use();
+        self.prepare_passes_objects_per_mmr(camera, selected);
         {
         let mut fbo_mgr = self.resource.fbo_manager.borrow_mut();
         let fbo_sel = fbo_mgr.get_mut_or_panic(self.fbo_selected);
@@ -660,10 +612,8 @@ impl Render {
         fbo::Fbo::cgl_use_end();
 
         self.clean_passes();
-        self.add_objects_to_passes(camera, objects);
-        println!("OOOOBBBB :::::::::::::: {}", objects2.len());
-        //self.prepare_passes_objects_per_mmr(camera, objects2);
-        self.add_mmr(camera, objects2);
+        println!("OOOOBBBB :::::::::::::: {}", objects.len());
+        self.add_mmr(camera, objects);
         self.add_mmr(camera, cameras);
 
         {
@@ -742,7 +692,7 @@ impl Render {
         }
         //*/
 
-        let sel_len = selected2.len();
+        let sel_len = selected.len();
         println!("selllll :::::::::::::: {}", sel_len);
 
         if sel_len > 0 {
@@ -765,8 +715,8 @@ impl Render {
             //ld.push_back(self.dragger.clone());
             //self.prepare_passes_objects_per(ld);
             //self.prepare_passes_objects_per(draggers);
-            println!("dragger :::::::::::::: {}", draggers2.len());
-            self.prepare_passes_objects_per_mmr(camera, draggers2);
+            println!("dragger :::::::::::::: {}", draggers.len());
+            self.prepare_passes_objects_per_mmr(camera, draggers);
 
 
             /*
@@ -907,34 +857,30 @@ fn prepare_passes_object(
 
     {
         let oc = o.clone();
-        let mut occ = oc.write().unwrap();
+        let occ = oc.read().unwrap();
         let name = occ.name.clone();
         let render = &occ.mesh_render;
 
-        let pass = match *render {
+        match *render {
             Some(ref mr) => {
-                get_pass_from_mesh_render(
+                if let Some(pass) = get_pass_from_mesh_render(
                     mr,
                     passes,
                     material_manager,
                     shader_manager,
                     camera,
                     load
-                    )
+                    ) {
+                        pass.add_mmr(
+                            MatrixMeshRender::new(
+                                occ.get_world_matrix(),
+                                mr.clone()));
+                }
             },
             None => {
                 println!("{}, no mesh render, return", name);
-                return
             }
-        };
-
-        if let Some(cam_pass) = pass {
-            cam_pass.add_object(o.clone());
         }
-        else {
-            println!("NO PASS OBJJJJJJJJJJJJ");
-        }
-
     }
 }
 
@@ -1058,34 +1004,52 @@ impl GameRender {
         //cam_ortho.set_resolution(w, h);
     }
 
-    fn prepare_passes_objects_per(
+    fn prepare_passes_objects_per_mmr(
         &mut self,
         camera : &CameraIdMat,
-        obs : &[Arc<RwLock<object::Object>>])
+        mmr : &[MatrixMeshRender])
     {
+        let load = Arc::new(Mutex::new(0));
         for (_,p) in self.passes.iter_mut()
         {
             p.passes.clear();
         }
 
-        for o in obs.iter() {
-            prepare_passes_object(
-                o.clone(),
+        self.add_mmr(camera, mmr);
+    }
+
+    fn add_mmr(
+        &mut self,
+        camera : &CameraIdMat,
+        mmr : &[MatrixMeshRender])
+    {
+        let load = Arc::new(Mutex::new(0));
+
+        for m in mmr {
+            let pass = get_pass_from_mesh_render(
+                &m.mr,
                 &mut self.passes,
                 &mut self.resource.material_manager.borrow_mut(),
                 &mut self.resource.shader_manager.borrow_mut(),
-                camera);
+                camera,
+                load.clone()
+                );
+
+            if let Some(cam_pass) = pass {
+                cam_pass.add_mmr(m.clone());
+            }
         }
     }
+
 
     pub fn draw(
         &mut self,
         camera : &CameraIdMat,
-        objects : &[Arc<RwLock<object::Object>>],
+        objects : &[MatrixMeshRender],
         loading : Arc<Mutex<usize>>
         ) -> bool
     {
-        self.prepare_passes_objects_per(camera, objects);
+        self.prepare_passes_objects_per_mmr(camera, objects);
 
         let mut not_yet_loaded = 0;
         for p in self.passes.values()
@@ -1333,27 +1297,6 @@ impl NewRender
         //let mut cam_ortho = self.camera_ortho.borrow_mut();
         //cam_ortho.set_resolution(w, h);
     }
-
-    /*
-    fn prepare_passes_objects_per(
-        &mut self,
-        obs : &[Arc<RwLock<object::Object>>])
-    {
-        for (_,p) in self.passes.iter_mut()
-        {
-            p.passes.clear();
-        }
-
-        for o in obs.iter() {
-            prepare_passes_object(
-                o.clone(),
-                &mut self.passes,
-                &mut self.resource.material_manager.borrow_mut(),
-                &mut self.resource.shader_manager.borrow_mut(),
-                self.camera.clone());
-        }
-    }
-    */
 
     pub fn draw(
         &mut self,
