@@ -182,30 +182,6 @@ impl RenderPass
         */
     }
 
-    fn draw_object(
-        &self,
-        shader : &shader::Shader,
-        ob : &mut object::Object,
-        matrix : &matrix::Matrix4,
-        resource : &resource::ResourceGroup,
-        load : Arc<Mutex<usize>>
-        ) -> usize
-    {
-
-        if ob.mesh_render.is_none() {
-            println!("return no mesh_render : {}", ob.name);
-            return 0usize;
-        }
-
-        self.draw_mmr(shader,
-                      &ob.get_world_matrix(), 
-                      ob.mesh_render.as_ref().unwrap(),
-                      matrix,
-                      resource,
-                      load)
-
-    }
-
     fn draw_mmr(
         &self,
         shader : &shader::Shader,
