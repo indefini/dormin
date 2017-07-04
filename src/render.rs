@@ -12,7 +12,6 @@ use resource::ResTT;
 use shader;
 use material;
 use mesh;
-use object;
 use camera;
 use matrix;
 use texture;
@@ -79,6 +78,45 @@ impl MatrixMeshRender {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct TransformMeshRender
+{
+    transform : transform::Transform,
+    mr : mesh_render::MeshRender
+}
+
+impl TransformMeshRender {
+    pub fn new(t : transform::Transform, mr : mesh_render::MeshRender) -> TransformMeshRender
+    {
+        TransformMeshRender {
+            transform : t,
+            mr : mr
+        }
+    }
+
+    pub fn with_mesh(mr : mesh_render::MeshRender) -> TransformMeshRender
+    {
+        TransformMeshRender {
+            transform : Default::default(),
+            mr : mr
+        }
+    }
+
+    pub fn to_mmr(&self) -> MatrixMeshRender
+    {
+        MatrixMeshRender::new(self.transform.compute_return_local_matrix(), self.mr.clone())
+    }
+
+    pub fn set_uniform_data(
+        &mut self,
+        name : &str,
+        data : shader::UniformData)
+    {
+        self.mr.material.get_instance().unwrap().set_uniform_data(name, data);
+    }
+}
+
 
 struct CameraPass
 {
@@ -243,22 +281,22 @@ pub struct Render
 
     resource : Rc<resource::ResourceGroup>,
 
-    camera_ortho : Rc<RefCell<camera::Camera>>,
+    //camera_ortho : camera::Camera,
+    camera_ortho : TransformCamera,
 
     //fbo_all : Arc<RwLock<fbo::Fbo>>,
     //fbo_selected : Arc<RwLock<fbo::Fbo>>,
     fbo_all : usize,
     fbo_selected : usize,
 
-    quad_outline : Arc<RwLock<object::Object>>,
-    quad_all : Arc<RwLock<object::Object>>,
+    quad_outline : TransformMeshRender,
+    quad_all : TransformMeshRender,
 
-    grid : Arc<RwLock<object::Object>>,
-    camera_repere : Arc<RwLock<object::Object>>,
+    //shoud be view objects?
+    grid : TransformMeshRender,
+    camera_repere : TransformMeshRender,
 
-    line : Arc<RwLock<object::Object>>
-
-    //pub dragger : Arc<RwLock<object::Object>>,
+    line : TransformMeshRender,
 }
 
 impl Render {
@@ -271,85 +309,79 @@ impl Render {
         let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_all");
         let fbo_selected = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_selected");
 
-        let camera_ortho = Rc::new(RefCell::new(factory.create_camera()));
+        let camera_ortho =
         {
-            let mut cam = camera_ortho.borrow_mut();
+            //let mut cam = factory.create_camera();
+            let mut cam = TransformCamera::new();
             cam.data.projection = camera::Projection::Orthographic;
             cam.pan(&vec::Vec3::new(0f64,0f64,50f64));
-        }
-
-        let r = Render { 
-            passes : HashMap::new(),
-            camera_ortho : camera_ortho,
-            fbo_all : fbo_all,
-            fbo_selected : fbo_selected,
-            quad_outline : Arc::new(RwLock::new(factory.create_object("quad_outline"))),
-            quad_all : Arc::new(RwLock::new(factory.create_object("quad_all"))),
-
-
-            grid : Arc::new(RwLock::new(factory.create_object("grid"))),
-            camera_repere : Arc::new(RwLock::new(
-                    factory.create_object("camera_repere"))),
-
-            //dragger : dragger// Arc::new(RwLock::new(
-                    //factory.create_object("dragger"))),
-            line : Arc::new(RwLock::new(factory.create_object("line"))),
-            resource : resource.clone()
+            cam
         };
 
-        let material_manager = &resource.material_manager;
+        let quad_outline = {
+            let mut m = mesh::Mesh::new();
+            m.add_quad(1f32, 1f32);
 
-        {
-            //let m = Arc::new(RwLock::new(mesh::Mesh::new()));
+            let outline_mat = resource.material_manager.borrow_mut().request_use_no_proc_tt_instance("material/outline.mat");
+
+            let mere = mesh_render::MeshRender::new_with_mesh_and_mat_res(ResTT::new_with_instance("outline_quad", m), outline_mat);
+             TransformMeshRender::with_mesh(mere)
+        };
+
+        let quad_all = {
+            let mut m = mesh::Mesh::new();
+            m.add_quad(1f32, 1f32);
+
+            let all_mat = resource.material_manager.borrow_mut().request_use_no_proc_tt_instance("material/fbo_all.mat");
+
+            let mere = mesh_render::MeshRender::new_with_mesh_and_mat_res(ResTT::new_with_instance("quad_all", m), all_mat);
+             TransformMeshRender::with_mesh(mere)
+        };
+
+        let grid = {
             let mut m = mesh::Mesh::new();
             create_grid(&mut m, 100i32, 1i32);
 
             let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
                 "material/line.mat");
-            r.grid.write().unwrap().mesh_render = Some(mere);
-        }
+             TransformMeshRender::with_mesh(mere)
+        };
 
-        {
-            //let m = Arc::new(RwLock::new(mesh::Mesh::new()));
+        let camera_repere = {
             let mut m = mesh::Mesh::new();
             create_repere(&mut m, 40f64 );
 
             let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
                 "material/line.mat");
-            r.camera_repere.write().unwrap().mesh_render = Some(mere);
-        }
+            TransformMeshRender::with_mesh(mere)
+        };
 
-        {
-            let mut m = mesh::Mesh::new();
-            m.add_quad(1f32, 1f32);
-
-            let outline_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/outline.mat");
-
-            let mere = mesh_render::MeshRender::new_with_mesh_and_mat_res(ResTT::new_with_instance("outline_quad", m), outline_mat);
-            r.quad_outline.write().unwrap().mesh_render = Some(mere);
-        }
-
-        {
-            let mut m = mesh::Mesh::new();
-            m.add_quad(1f32, 1f32);
-
-            let all_mat = material_manager.borrow_mut().request_use_no_proc_tt_instance("material/fbo_all.mat");
-
-            let mere = mesh_render::MeshRender::new_with_mesh_and_mat_res(ResTT::new_with_instance("quad_all", m), all_mat);
-            r.quad_all.write().unwrap().mesh_render = Some(mere);
-        }
-
+        let line =
         {
             let m = mesh::Mesh::new();
             let mere = mesh_render::MeshRender::new_with_mesh(
                 m,
                 "material/line.mat");
-            r.line.write().unwrap().mesh_render = Some(mere);
-        }
+            TransformMeshRender::with_mesh(mere)
+        };
 
-        r
+        Render { 
+            passes : HashMap::new(),
+            camera_ortho : camera_ortho,
+            fbo_all : fbo_all,
+            fbo_selected : fbo_selected,
+            quad_outline : quad_outline,
+            quad_all : quad_all, 
+
+
+            grid : grid,
+            camera_repere : camera_repere,
+
+            line : line, 
+            resource : resource.clone()
+        }
     }
 
     pub fn init(&mut self)
@@ -369,14 +401,13 @@ impl Render {
     pub fn resize(&mut self, w : c_int, h : c_int)
     {
         {
-            self.quad_outline.write().unwrap().scale = 
+            self.quad_outline.transform.scale = 
                 vec::Vec3::new(w as f64, h as f64, 1f64);
 
-            self.quad_all.write().unwrap().scale = 
+            self.quad_all.transform.scale = 
                 vec::Vec3::new(w as f64, h as f64, 1f64);
 
-            let mut cam_ortho = self.camera_ortho.borrow_mut();
-            cam_ortho.set_resolution(w, h);
+            self.camera_ortho.set_resolution(w, h);
 
             //self.fbo_all.write().unwrap().cgl_resize(w, h);
             //let fbo_all = &self.resource.fbo_manager.borrow().get_from_state(self.fbo_all);
@@ -398,7 +429,7 @@ impl Render {
 
     fn resolution_set(&mut self, w : c_int, h : c_int)
     {
-        self.quad_outline.write().unwrap().set_uniform_data(
+        self.quad_outline.set_uniform_data(
             "resolution",
             shader::UniformData::Vec2(vec::Vec2::new(w as f64, h as f64)));
 
@@ -418,12 +449,8 @@ impl Render {
         }
 
         {
-            let line : &mut object::Object = &mut *self.line.write().unwrap();
-            if let Some(ref mut mr) = line.mesh_render
-            {
-                let mesh = &mut mr.mesh.get_instance().unwrap();//.write().unwrap();
-                mesh.clear_lines();
-            }
+            let mesh = &mut self.line.mr.mesh.get_instance().unwrap();//.write().unwrap();
+            mesh.clear_lines();
         }
     }
 
@@ -477,7 +504,7 @@ impl Render {
     }
     */
 
-    fn prepare_passes_objects_ortho(&mut self, list : &[Arc<RwLock<object::Object>>])
+    fn prepare_passes_objects_ortho(&mut self, mmr : &[MatrixMeshRender])
     {
         for (_,p) in self.passes.iter_mut()
         {
@@ -485,41 +512,9 @@ impl Render {
             p.passes.clear();
         }
 
-        let cam = CameraIdMat::from_camera(&*self.camera_ortho.borrow());
-
-        for o in list {
-            prepare_passes_object(
-                o.clone(),
-                &mut self.passes,
-                &mut self.resource.material_manager.borrow_mut(),
-                &mut self.resource.shader_manager.borrow_mut(),
-                &cam);
-        }
+        let cam = CameraIdMat::from_transform_camera(&self.camera_ortho);
+        self.add_mmr(&cam, &mmr);
     }
-
-/*
-    fn prepare_passes_objects_per(
-        &mut self,
-        camera : &CameraIdMat,
-        list : &[Arc<RwLock<object::Object>>]
-        )
-    {
-        for (_,p) in self.passes.iter_mut()
-        {
-            //p.objects.clear();
-            p.passes.clear();
-        }
-
-        for o in list {
-            prepare_passes_object(
-                o.clone(),
-                &mut self.passes,
-                &mut self.resource.material_manager.borrow_mut(),
-                &mut self.resource.shader_manager.borrow_mut(),
-                camera);
-        }
-    }
-    */
 
     fn prepare_passes_objects_per_mmr(
         &mut self,
@@ -593,29 +588,21 @@ impl Render {
         self.add_mmr(camera, cameras);
 
         {
-        prepare_passes_object(
-            self.grid.clone(),
-            &mut self.passes,
-            &mut self.resource.material_manager.borrow_mut(),
-            &mut self.resource.shader_manager.borrow_mut(),
-            camera);
+            let mmr = self.grid.to_mmr();
+            self.add_mmr(camera, vec![mmr].as_slice());
 
-        let m = 40f64;
-        self.camera_repere.write().unwrap().position = 
-            vec::Vec3::new(
-                -self.camera_ortho.borrow().data.width/2f64 +m, 
-                -self.camera_ortho.borrow().data.height/2f64 +m, 
-                -10f64);
-        self.camera_repere.write().unwrap().orientation = 
-            camera.orientation.inverse();
+            let m = 40f64;
+            self.camera_repere.transform.position = 
+                vec::Vec3::new(
+                    -self.camera_ortho.data.width/2f64 +m, 
+                    -self.camera_ortho.data.height/2f64 +m, 
+                    -10f64);
+            self.camera_repere.transform.orientation = 
+                camera.orientation.inverse();
 
-        let cam = CameraIdMat::from_camera(&*self.camera_ortho.borrow());
-        prepare_passes_object(
-            self.camera_repere.clone(),
-            &mut self.passes,
-            &mut self.resource.material_manager.borrow_mut(),
-            &mut self.resource.shader_manager.borrow_mut(),
-            &cam);
+            let cam = CameraIdMat::from_transform_camera(&self.camera_ortho);
+            let mmr = self.camera_repere.to_mmr();
+            self.add_mmr(&cam, vec![mmr].as_slice());
         }
 
         {
@@ -652,9 +639,7 @@ impl Render {
         */
 
 
-        //*
-        let mut l = Vec::new();
-        l.push(self.quad_all.clone());
+        let l = vec![self.quad_all.to_mmr()];
         self.prepare_passes_objects_ortho(&l);
 
         for p in self.passes.values()
@@ -666,14 +651,12 @@ impl Render {
 
             not_loaded = not_loaded + not;
         }
-        //*/
 
         let sel_len = selected.len();
         println!("selllll :::::::::::::: {}", sel_len);
 
         if sel_len > 0 {
-            let mut l = Vec::new();
-            l.push(self.quad_outline.clone());
+            let l = vec![self.quad_outline.to_mmr()];
             self.prepare_passes_objects_ortho(&l);
 
             for p in self.passes.values()
@@ -729,12 +712,8 @@ impl Render {
                 self.camera.clone());
              */
 
-            prepare_passes_object(
-                self.line.clone(),
-                &mut self.passes,
-                &mut self.resource.material_manager.borrow_mut(),
-                &mut self.resource.shader_manager.borrow_mut(),
-                camera);
+            let mmr = self.line.to_mmr();
+            self.add_mmr(camera, vec![mmr].as_slice());
 
             for p in self.passes.values()
             {
@@ -809,55 +788,6 @@ fn get_pass_from_mesh_render<'a>(
             Some(cam_pass)
         }
 
-}
-
-fn prepare_passes_object(
-    o : Arc<RwLock<object::Object>>,
-    passes : &mut HashMap<String, Box<RenderPass>>, 
-    material_manager : &mut resource::ResourceManager<material::Material>,
-    shader_manager : &mut resource::ResourceManager<shader::Shader>,
-    camera : &CameraIdMat,
-    )
-{
-    let load = Arc::new(Mutex::new(0));
-
-        for c in o.read().unwrap().children.iter()
-        {
-            prepare_passes_object(
-                c.clone(),
-                passes,
-                material_manager,
-                shader_manager,
-                camera);
-        }
-
-    {
-        let oc = o.clone();
-        let occ = oc.read().unwrap();
-        let name = occ.name.clone();
-        let render = &occ.mesh_render;
-
-        match *render {
-            Some(ref mr) => {
-                if let Some(pass) = get_pass_from_mesh_render(
-                    mr,
-                    passes,
-                    material_manager,
-                    shader_manager,
-                    camera,
-                    load
-                    ) {
-                        pass.add_mmr(
-                            MatrixMeshRender::new(
-                                occ.get_world_matrix(),
-                                mr.clone()));
-                }
-            },
-            None => {
-                println!("{}, no mesh render, return", name);
-            }
-        }
-    }
 }
 
 fn create_grid(m : &mut mesh::Mesh, num : i32, space : i32)
@@ -1485,6 +1415,81 @@ impl CameraIdMat {
             id : id,
             orientation : transform.orientation,
             matrix : matrix
+        }
+    }
+
+    pub fn from_transform_camera(camera : &TransformCamera) -> CameraIdMat
+    {
+        let local = camera.transform.compute_return_local_matrix();
+        let per = camera.get_perspective();
+        let cam_mat_inv = local.get_inverse();
+        let matrix = &per * &cam_mat_inv;
+
+        CameraIdMat {
+            id : camera.id,
+            orientation : camera.transform.orientation,
+            matrix : matrix
+        }
+    }
+}
+
+pub struct TransformCamera
+{
+    id : uuid::Uuid,
+    data : camera::CameraData,
+    transform : transform::Transform
+}
+
+impl TransformCamera
+{
+    fn new() -> TransformCamera
+    {
+        TransformCamera {
+            id : uuid::Uuid::new_v4(),
+            data : camera::CameraData::default(),
+            transform : Default::default()
+        }
+    }
+
+    pub fn pan(&mut self, t : &vec::Vec3)
+    {
+        self.data.local_offset = self.data.local_offset + *t;
+        let tt = self.transform.orientation.rotate_vec3(t);
+        self.transform.position = self.transform.position + tt;
+    }
+
+    pub fn set_resolution(&mut self, w : i32, h : i32)
+    {
+        if w as f64 != self.data.width || h as f64 != self.data.height {
+            self.data.width = w as f64;
+            self.data.height = h as f64;
+            self.update_projection();
+            //cam.update_orthographic(c);
+        }
+    }
+
+    pub fn update_projection(&mut self)
+    {
+        self.data.aspect = self.data.width/ self.data.height;
+        self.data.fovy = self.data.fovy_base * self.data.height/ (self.data.height_base as f64);
+        //mat4_set_perspective(c->projection, c->fovy, c->aspect , c->near, c->far);
+    }
+
+    pub fn get_perspective(&self) -> matrix::Matrix4
+    {
+        match self.data.projection {
+            camera::Projection::Perspective =>
+                matrix::Matrix4::perspective(
+                    self.data.fovy,
+                    self.data.aspect,
+                    self.data.near,
+                    self.data.far),
+            camera::Projection::Orthographic => 
+                matrix::Matrix4::orthographic(
+                    (self.data.width / 2f64) as u32,
+                    (self.data.height / 2f64) as u32,
+                    self.data.near,
+                    self.data.far)
         }
     }
 }

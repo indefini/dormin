@@ -180,6 +180,14 @@ impl Transform
             self.dirty = false;
         }
     }
+    
+    pub fn compute_return_local_matrix(&self) -> matrix::Matrix4
+    {
+        compute_matrix_from_position_rotation_scale(
+            &self.position,
+            &self.orientation.as_quat(),
+            &self.scale)
+    }
 
     //TODO for debug
     pub fn set_as_dirty(&mut self)
