@@ -10,6 +10,7 @@ use matrix;
 use geometry;
 use transform::Orientation;
 use uuid;
+use render::CameraIdMat;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Projection
@@ -431,6 +432,23 @@ impl Camera
     pub fn get_object(&self) -> Option<Arc<RwLock<object::Object>>>
     {
         Some(self.object.clone())
+    }
+
+    pub fn to_cam_id_mat(&self) -> CameraIdMat
+    {
+        let (ori, world) = {
+            let ob = self.object.read().unwrap();
+            (ob.orientation,ob.get_world_matrix().clone())
+        };
+        let per = self.get_perspective();
+        let cam_mat_inv = world.get_inverse();
+        let matrix = &per * &cam_mat_inv;
+
+        CameraIdMat {
+            id : self.id,
+            orientation : ori,
+            matrix : matrix
+        }
     }
 
 }

@@ -18,7 +18,6 @@ use texture;
 use component::mesh_render;
 use fbo;
 use vec;
-use factory;
 use transform;
 use uniform;
 
@@ -302,16 +301,13 @@ pub struct Render
 impl Render {
 
     //TODO remove dragger and put "view_objects"
-    pub fn new(factory: &factory::Factory,
-               resource : Rc<resource::ResourceGroup>,
-               ) -> Render
+    pub fn new(resource : Rc<resource::ResourceGroup> ) -> Render
     {
         let fbo_all = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_all");
         let fbo_selected = resource.fbo_manager.borrow_mut().request_use_no_proc_new("fbo_selected");
 
         let camera_ortho =
         {
-            //let mut cam = factory.create_camera();
             let mut cam = TransformCamera::new();
             cam.data.projection = camera::Projection::Orthographic;
             cam.pan(&vec::Vec3::new(0f64,0f64,50f64));
@@ -1376,30 +1372,12 @@ fn draw_mesh(shader : &shader::Shader, mesh : &mesh::Mesh)
 
 pub struct CameraIdMat
 {
-    id : uuid::Uuid,
-    orientation : transform::Orientation,
-    matrix : matrix::Matrix4
+    pub id : uuid::Uuid,
+    pub orientation : transform::Orientation,
+    pub matrix : matrix::Matrix4
 }
 
 impl CameraIdMat {
-    //pub fn new(camera : &camera2::Camera) -> CameraIdMat
-
-    pub fn from_camera(camera : &camera::Camera) -> CameraIdMat
-    {
-        let (ori, world) = {
-            let ob = camera.object.read().unwrap();
-            (ob.orientation,ob.get_world_matrix().clone())
-        };
-        let per = camera.get_perspective();
-        let cam_mat_inv = world.get_inverse();
-        let matrix = &per * &cam_mat_inv;
-
-        CameraIdMat {
-            id : camera.id,
-            orientation : ori,
-            matrix : matrix
-        }
-    }
 
     pub fn from_transform_camera2(
         id : uuid::Uuid,
