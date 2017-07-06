@@ -1,12 +1,8 @@
-use object;
-use scene;
-use camera;
 use vec;
+use std;
 use std::any::{Any};//, AnyRefExt};
 use std::f64::consts;
 use transform;
-use component;
-use component::mesh_render;
 use resource;
 use mesh;
 use material;
@@ -574,19 +570,20 @@ fn join_string(path : &Vec<String>) -> String
 }
 */
 
+
 #[macro_export]
 macro_rules! property_set_impl(
     ($my_type:ty, [ $($member:ident),* ]) => (
         impl $crate::property::PropertyWrite for $my_type
         {
-            fn test_set_property(&mut self, value: &Any)
+            fn test_set_property(&mut self, value: &::std::any::Any)
             {
                 if let Some(v) = value.downcast_ref::<$my_type>() {
                     *self = (*v).clone();
                 }
             }
 
-            fn test_set_property_hier(&mut self, name : &str, value: &Any)
+            fn test_set_property_hier(&mut self, name : &str, value: &::std::any::Any)
             {
                 let mut v : Vec<&str> = name.split('/').collect();
                 //TODO remove this?
@@ -646,7 +643,7 @@ macro_rules! property_set_impl(
                 }
             }
 
-            fn add_item(&mut self, name : &str, index :usize, value : &Any)
+            fn add_item(&mut self, name : &str, index :usize, value : &::std::any::Any)
             {
                 let mut v : Vec<&str> = name.split('/').collect();
                 println!("yooooooooo frommacro : {}", name);
@@ -706,11 +703,6 @@ property_set_impl!(vec::Vec3,[x,y,z]);
 property_set_impl!(vec::Quat,[x,y,z,w]);
 //property_set_impl!(mesh_render::MeshRender,[mesh,material]);
 //property_set_impl!(armature::MeshRender,[mesh,material]);
-property_set_impl!(object::Object,[name,position,orientation,scale,comp_data,comp_lua]);
-//property_set_impl!(object::Object,[name,position,orientation,scale]);
-property_set_impl!(scene::Scene,[name,camera]);
-property_set_impl!(camera::Camera,[data]);
-property_set_impl!(camera::CameraData,[far,near]);
 property_set_impl!(transform::Transform,[position,orientation,scale]);
 
 
@@ -719,7 +711,7 @@ macro_rules! property_get_impl(
     ($my_type:ty, [ $($member:ident),* ]) => (
         impl $crate::property::PropertyGet for $my_type
         {
-            fn get_property_hier(&self, name : &str) -> Option<Box<Any>>
+            fn get_property_hier(&self, name : &str) -> Option<Box<::std::any::Any>>
             {
                 let mut v : Vec<&str> = name.split('/').collect();
                 //TODO remove this?
@@ -765,9 +757,4 @@ property_get_impl!(vec::Quat,[x,y,z,w]);
 property_get_impl!(resource::ResTT<mesh::Mesh>,[name]);
 property_get_impl!(resource::ResTT<material::Material>,[name]);
 //property_get_impl!(mesh_render::MeshRender,[mesh,material]);
-//property_get_impl!(object::Object,[name,position,orientation,scale]);
-property_get_impl!(object::Object,[name,position,orientation,scale,comp_data,comp_lua]);
-property_get_impl!(scene::Scene,[name,camera]);
-property_get_impl!(camera::Camera,[data]);
-property_get_impl!(camera::CameraData,[far,near]);
 

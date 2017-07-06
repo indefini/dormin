@@ -4,7 +4,6 @@ use serde_derive;
 
 use vec;
 use vec::{Vec3};
-use object;
 use matrix;
 use geometry;
 use transform::{Transform,Orientation};

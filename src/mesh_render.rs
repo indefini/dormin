@@ -4,7 +4,6 @@ use std::cell::RefCell;
 use std::sync::{RwLock, Arc};
 
 use component::{Component, CompData};
-use object::Object;
 use transform;
 use mesh;
 use resource;
@@ -32,6 +31,7 @@ impl Default for MeshRender {
 
 impl Component for MeshRender
 {
+    /*
     fn update(
         &mut self,
         ob : &mut Object,
@@ -41,6 +41,7 @@ impl Component for MeshRender
         )
     {
     }
+    */
 
     fn get_name(&self) -> String {
         "mesh_render".to_owned()

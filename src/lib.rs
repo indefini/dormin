@@ -76,14 +76,13 @@ pub mod texture;
 pub mod geometry;
 pub mod intersection;
 pub mod fbo;
-pub mod factory;
+pub mod mesh_render;
 
 pub mod transform;
 
-pub mod model;
-
 pub mod component;
-pub use component::manager;
+//pub use component::manager;
+pub mod armature_animation;
 
 
 mod util;

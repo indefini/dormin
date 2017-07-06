@@ -6,7 +6,7 @@ use object::Object;
 use std::any::Any;
 use component::player::{Player, Enemy, Collider};
 use armature::ArmaturePath;
-use component::mesh_render::{MeshRender};
+use mesh_render::{MeshRender};
 use component::armature_animation::ArmatureAnimation;
 use component::player::PlayerBehavior;
 use resource;

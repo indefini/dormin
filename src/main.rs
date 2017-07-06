@@ -67,7 +67,6 @@ mod texture;
 mod geometry;
 mod intersection;
 mod fbo;
-mod factory;
 
 mod transform;
 
@@ -108,6 +107,7 @@ fn main() {
      println!("The map has {} entries.", *component::manager::COUNT);
     }
 
+    /*
     {
         //let mut cm = component::Manager::new();
         let mut cm = component::manager::COMP_MGR.lock().unwrap();
@@ -116,6 +116,7 @@ fn main() {
             "armature_animation",
             component::armature_animation::new);
     }
+    */
 
     {
 

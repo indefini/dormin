@@ -15,14 +15,14 @@ use mesh;
 use camera;
 use matrix;
 use texture;
-use component::mesh_render;
+use mesh_render;
 use fbo;
 use vec;
 use transform;
 use uniform;
 
 use armature;
-use component::armature_animation;
+use armature_animation;
 
 use geometry;
 
@@ -1145,7 +1145,7 @@ use camera2;
 struct RenderGroup<'a>
 {
     camera : (&'a transform::Transform, &'a camera2::Camera),
-    renderables : &'a Iterator<Item=(&'a transform::Transform, component::mesh_render::MeshRender)>,
+    renderables : &'a Iterator<Item=(&'a transform::Transform, mesh_render::MeshRender)>,
 }
 
 struct RenderByShader
@@ -1204,7 +1204,7 @@ impl NewRender
         &mut self,
         //mesh : &[component::mesh_render::MeshRenderer],
         //transform : &Iterator<Item=&transform::Transform>,
-        renderables : &Iterator<Item=(&transform::Transform, component::mesh_render::MeshRender)>,
+        renderables : &Iterator<Item=(&transform::Transform, mesh_render::MeshRender)>,
         loading : Arc<Mutex<usize>>
         ) -> bool
     {
@@ -1378,24 +1378,7 @@ pub struct CameraIdMat
 }
 
 impl CameraIdMat {
-
-    pub fn from_transform_camera2(
-        id : uuid::Uuid,
-        transform : &transform::Transform,
-        camera : &camera2::Camera) -> CameraIdMat
-    {
-        let local = transform.get_computed_local_matrix();
-        let per = camera.get_perspective();
-        let cam_mat_inv = local.get_inverse();
-        let matrix = &per * &cam_mat_inv;
-
-        CameraIdMat {
-            id : id,
-            orientation : transform.orientation,
-            matrix : matrix
-        }
-    }
-
+    
     pub fn from_transform_camera(camera : &TransformCamera) -> CameraIdMat
     {
         let local = camera.transform.compute_return_local_matrix();

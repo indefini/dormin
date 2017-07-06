@@ -11,6 +11,8 @@ use geometry;
 use transform::Orientation;
 use uuid;
 use render::CameraIdMat;
+use resource;
+use transform;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Projection
@@ -451,5 +453,47 @@ impl Camera
         }
     }
 
+}
+
+property_set_impl!(Camera,[data]);
+property_set_impl!(CameraData,[far,near]);
+
+property_get_impl!(Camera,[data]);
+property_get_impl!(CameraData,[far,near]);
+
+impl resource::Create for Camera
+{
+    fn create(name : &str) -> Camera
+    {
+        println!("review this of course");
+        let o = object::Object {
+            name : String::from("camera"),
+            id : uuid::Uuid::new_v4(),
+            mesh_render : None,
+            position : vec::Vec3::zero(),
+            //orientation : vec::Quat::identity(),
+            orientation : transform::Orientation::new_quat(),
+            //angles : vec::Vec3::zero(),
+            scale : vec::Vec3::one(),
+            children : Vec::new(),
+            parent : None,
+            //transform : box transform::Transform::new()
+            components : Vec::new(),
+            comp_data : Vec::new(),
+            comp_string : Vec::new(),
+            comp_lua : Vec::new(),
+        };
+
+        Camera {
+            data : Default::default(),
+            object : Arc::new(RwLock::new(o)),
+            id : uuid::Uuid::new_v4(),
+            object_id : None
+        }
+    }
+
+    fn inittt(&mut self)
+    {
+    }
 }
 

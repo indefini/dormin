@@ -7,7 +7,7 @@ use material;
 use component;
 use input;
 use component::{Component,CompData, Components};
-use component::mesh_render;
+use mesh_render;
 use mesh;
 
 use std::sync::{RwLock, Arc};//,RWLockReadGuard};
@@ -1060,5 +1060,24 @@ pub fn is_object_in_planes(
             }
         }
     }
+}
+
+property_set_impl!(Object,[name,position,orientation,scale,comp_data,comp_lua]);
+//property_set_impl!(object::Object,[name,position,orientation,scale]);
+//
+//property_get_impl!(object::Object,[name,position,orientation,scale]);
+property_get_impl!(Object,[name,position,orientation,scale,comp_data,comp_lua]);
+
+pub fn objects_center(objects : &[Arc<RwLock<Object>>]) -> vec::Vec3
+{
+    let mut v = vec::Vec3::zero();
+    for o in objects.iter()
+    {
+        v = v + o.read().unwrap().position;
+    }
+
+    v = v / objects.len() as f64;
+
+    v
 }
 

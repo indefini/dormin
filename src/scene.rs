@@ -16,6 +16,7 @@ use object;
 use camera;
 use component;
 use resource;
+use mesh_render;
 
 use transform;
 
@@ -412,7 +413,7 @@ impl Scene
                 println!("there is armature path");
             }
 
-            let omr = ob.get_comp_data_value::<component::mesh_render::MeshRender>();
+            let omr = ob.get_comp_data_value::<mesh_render::MeshRender>();
             if let Some(ref mr) = omr {
                 ob.mesh_render = Some(mr.clone())
             }
@@ -672,3 +673,5 @@ pub fn post_read_parent_set(o : Arc<RwLock<object::Object>>)
     }
 }
 
+property_set_impl!(Scene,[name,camera]);
+property_get_impl!(Scene,[name,camera]);
