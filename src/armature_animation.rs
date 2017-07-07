@@ -3,8 +3,6 @@ use std::cell::RefCell;
 use std::sync::{RwLock, Arc};
 
 
-use component::{Component, Components, CompData};
-use object::Object;
 use transform;
 use armature;
 use mesh;
@@ -25,14 +23,14 @@ pub enum State
 #[derive(Clone)]
 pub struct ArmatureAnimation
 {
-    state : State,
+    pub state : State,
     //armature : armature::Armature,
     //armature : Arc<RwLock<armature::Armature>>,
-    armature : resource::ResTT<armature::Armature>,
+    pub armature : resource::ResTT<armature::Armature>,
     pub arm_instance : armature::ArmatureInstance,
-    mesh : Option<resource::ResTT<mesh::Mesh>>,
-    action : Option<String>,
-    time : f64
+    pub mesh : Option<resource::ResTT<mesh::Mesh>>,
+    pub action : Option<String>,
+    pub time : f64
 
     //TODO mesh component + dependencies
     //mesh_base : Option<resource::ResTT<MeshRenderComponent>>,
@@ -84,82 +82,6 @@ impl ArmatureAnimation
 
 }
 
-impl Component for ArmatureAnimation
-{
-    /*
-    fn copy(&self) -> Rc<RefCell<Box<Component>>>
-    {
-        Rc::new(RefCell::new(box))
-    }
-    */
-
-    /*
-    fn copy(&self) -> Rc<RefCell<Box<Component>>>
-    {
-        Rc::new(RefCell::new(
-                box ArmatureAnimation
-                {
-                    state : self.state,
-                    armature : self.armature.clone(),
-                    mesh : self.mesh.clone(),
-                    arm_instance : self.arm_instance.clone(),
-                    action : self.action.clone(),
-                    time : self.time
-
-                }))
-    }
-    */
-
-    /*
-    fn update(
-        &mut self,
-        ob : &mut Object,
-        dt : f64,
-        input : &input::Input,
-        resource : &resource::ResourceGroup
-        )
-    {
-        if let Some(ref mut mr) = ob.mesh_render {
-            self.update(dt, mr, resource);
-        }
-    }
-    */
-
-    fn get_name(&self) -> String {
-        "armature_animation".to_owned()
-    }
-}
-
-/*
-pub fn new(ob : &Object, resource : &resource::ResourceGroup) -> Box<Components>
-{
-    println!("armature anim new---->>>>");
-    let arm = {
-        match ob.get_comp_data::<armature::ArmaturePath>(){
-            Some(a) => a.clone(),
-            None => panic!("no armature data")
-        }
-    };
-
-    let armature_manager = &mut *resource.armature_manager.borrow_mut();
-    let armature = armature_manager.request_use_no_proc_tt(arm.name.as_ref());
-    let instance = {
-        let arm_base = armature.get_ref(armature_manager).unwrap();
-        arm_base.create_instance()
-    };
-
-    let arm_anim = ArmatureAnimation {
-        state : State::Idle,
-        armature : armature,
-        arm_instance : instance,
-        mesh : None,
-        action : None,//Some(String::from("roll")),//None,
-        time : 0f64
-    };
-
-    box Components::ArmatureAnimation(arm_anim)
-}
-*/
 
 //TODO
 fn update_mesh_with_armature(

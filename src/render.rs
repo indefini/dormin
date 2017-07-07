@@ -1173,7 +1173,6 @@ pub struct CameraInfo<'a>
     //transform_owners : &'a Vec<usize>,
 }
 
-use component;
 impl NewRender
 {
     pub fn new(resource : Rc<resource::ResourceGroup>

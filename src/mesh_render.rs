@@ -3,7 +3,6 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::sync::{RwLock, Arc};
 
-use component::{Component, CompData};
 use transform;
 use mesh;
 use resource;
@@ -26,25 +25,6 @@ impl Default for MeshRender {
             mesh : ResTT::new("no_mesh"),
             material : ResTT::new("no_mat"),
         }
-    }
-}
-
-impl Component for MeshRender
-{
-    /*
-    fn update(
-        &mut self,
-        ob : &mut Object,
-        dt : f64,
-        input : &input::Input,
-        resource : &resource::ResourceGroup
-        )
-    {
-    }
-    */
-
-    fn get_name(&self) -> String {
-        "mesh_render".to_owned()
     }
 }
 

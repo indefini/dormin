@@ -65,13 +65,13 @@ pub mod armature;
 pub mod mesh;
 //mod mesh_render;
 pub mod render;
-pub mod object;
+//pub mod object;
 pub mod uniform;
 pub mod matrix;
 pub mod vec;
 pub mod camera;
 pub mod camera2;
-pub mod scene;
+//pub mod scene;
 pub mod texture;
 pub mod geometry;
 pub mod intersection;
@@ -80,7 +80,7 @@ pub mod mesh_render;
 
 pub mod transform;
 
-pub mod component;
+//pub mod component;
 //pub use component::manager;
 pub mod armature_animation;
 
