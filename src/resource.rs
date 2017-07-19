@@ -811,6 +811,29 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
+    pub fn add_resource(&mut self, name : &str, r : T) -> ResTT<T>
+    {
+        //let key = String::from(name);
+
+        match self.map.entry(name.to_owned()) {
+            Vacant(entry) => {
+                let index = self.loaded.len();
+                entry.insert(index);
+
+                //r.inittt();
+                let s = State::Using(r);
+                self.loaded.push(s);
+
+                ResTT::new_with_index(name, index)
+                //index
+            }
+            Occupied(entry) => {
+                panic!("resource with this name already exists");
+                //*entry.get()
+            },
+        }
+    }
+
     //TODO put to private
     pub fn get_mut_or_panic(&mut self,index : usize) -> &mut T
     {

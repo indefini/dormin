@@ -39,8 +39,8 @@ pub struct Shader
     pub vert_path : Option<String>,
     pub frag_path : Option<String>,
 
-    vert : Option<String>,
-    frag : Option<String>,
+    pub vert : Option<String>,
+    pub frag : Option<String>,
 
     #[serde(skip_serializing, skip_deserializing)]
     cgl_shader : Option<*const CglShader>, 
@@ -212,6 +212,13 @@ impl Shader
             }
         }
 
+        self.state = 1;
+    }
+
+    pub fn set_vert_frag(&mut self, vert : String, frag : String)
+    {
+        self.vert = Some(vert);
+        self.frag = Some(frag);
         self.state = 1;
     }
 

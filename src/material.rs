@@ -163,6 +163,20 @@ impl Material
             }
         };
     }
+
+    pub fn set_texture_data(&mut self, name : &str, data : Sampler)
+    {
+        let key = name.to_string();
+        let yep = match self.textures.entry(key){
+            Vacant(entry) => entry.insert(data),
+            Occupied(entry) => {
+                let entry = entry.into_mut();
+                *entry = data;
+                entry
+            }
+        };
+    }
+
 }
 
 impl resource::ResourceT for Material
