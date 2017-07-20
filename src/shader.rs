@@ -134,10 +134,10 @@ impl Shader
         }
     }
 
-    pub fn new(name : &str) -> Shader
+    pub fn new(name : String) -> Shader
     {
         Shader {
-            name : String::from(name),
+            name : name,
             cgl_shader : None,
             attributes : HashMap::new(),
             uniforms : HashMap::new(),
@@ -149,8 +149,16 @@ impl Shader
         }
     }
 
+    pub fn with_vert_frag(name : String, vert : String, frag : String) -> Shader
+    {
+        let mut s = Shader::new(name);
+        s.set_vert_frag(vert, frag);
+        s
+    }
+
     pub fn read(&mut self)
     {
+        println!("reading shader : {}", self.name);
         let mut file = {
             let path = Path::new(&self.name);
             BufReader::new(File::open(&path).ok().unwrap())

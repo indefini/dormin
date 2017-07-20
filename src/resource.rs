@@ -350,7 +350,7 @@ impl Create for shader::Shader
 {
     fn create(name : &str) -> shader::Shader
     {
-        shader::Shader::new(name)
+        shader::Shader::new(name.to_owned())
     }
 
     fn inittt(&mut self)
