@@ -21,6 +21,7 @@ use std::rc::Rc;
 use std::cell::{Cell, RefCell};
 use std::iter;
 use std::fmt;
+use std::any::Any;
 
 use uuid;
 
@@ -32,6 +33,19 @@ pub trait ResourceT  {
 fn return_none<T>() -> Option<T>
 {
     None
+}
+
+pub enum Origin
+{
+    None,
+    File(String),
+    AnyStaticRef(&'static Any),
+    AnyBox(Box<Any>)
+}
+
+fn origin_default() -> Origin
+{
+    Origin::None
 }
 
 #[derive(Serialize, Deserialize)]
@@ -46,6 +60,8 @@ pub struct ResTT<T>
     pub instance : Option<T>,
     #[serde(skip_serializing, skip_deserializing)]
     pub instance_managed : Option<usize>,
+    #[serde(skip_serializing, skip_deserializing, default="origin_default")]
+    pub origin : Origin
 }
 
 impl<T> ResTT<T>
@@ -56,7 +72,8 @@ impl<T> ResTT<T>
             name : String::from(name),
             resource : Cell::new(None),
             instance : None,
-            instance_managed : None
+            instance_managed : None,
+            origin : Origin::None
         }
     }
 
@@ -70,7 +87,8 @@ impl<T> ResTT<T>
             name : String::from(name),
             resource : Cell::new(None),
             instance : Some(r),
-            instance_managed : None
+            instance_managed : None,
+            origin : Origin::None
         }
     }
 
@@ -80,7 +98,8 @@ impl<T> ResTT<T>
             name : String::from(name),
             resource : Cell::new(Some(res)),
             instance : None,
-            instance_managed : None
+            instance_managed : None,
+            origin : Origin::None
         }
     }
 }
@@ -109,7 +128,7 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
         else {
             let i = rm.request_use_no_proc_new(self.name.as_ref());
             println!("warning !!!! this file gets requested everytime : {}", self.name);
-            //self.resource = Some(i);
+            self.resource.set(Some(i));
             i
         };
 
@@ -253,7 +272,8 @@ impl<T:Clonable> Clone for ResTT<T>
             resource : self.resource.clone(),
             //instance : None, //TODO
             instance : instance,
-            instance_managed : None //TODO
+            instance_managed : None, //TODO
+            origin : Origin::None //TODO
         }
     }
 }
@@ -313,9 +333,18 @@ impl<T:fmt::Debug> fmt::Debug for ResTT<T>
 
 }
 
+
 pub trait Create
 {
     fn create(name : &str) -> Self;
+    //fn create2(res : &Any) -> Option<Self>
+    fn create2(orig : &Origin) -> Self where Self: core::marker::Sized
+    {
+        match *orig {
+            Origin::File(ref s) => Create::create(s),
+            _ => unimplemented!()
+        }
+    }
     fn inittt(&mut self);
 }
 
@@ -324,6 +353,14 @@ impl Create for mesh::Mesh
     fn create(name : &str) -> mesh::Mesh
     {
         mesh::Mesh::new_from_file(name)
+    }
+
+    fn create2(orig : &Origin) -> mesh::Mesh
+    {
+        match *orig {
+            Origin::File(ref s) => mesh::Mesh::new_from_file(s),
+            _ => unimplemented!()
+        }
     }
 
     fn inittt(&mut self)

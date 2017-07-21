@@ -222,6 +222,12 @@ pub struct Weight
     pub weight : f32
 }
 
+pub enum Origin
+{
+    File(String),
+    Data(Box<[u8]>),
+    DataRef(&'static [u8])
+}
 
 #[derive(Clone)]
 pub struct Mesh
