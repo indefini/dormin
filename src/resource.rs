@@ -374,14 +374,12 @@ impl Create for mesh::Mesh
                 }
             },
             Origin::AnyBox(ref any) => {
-                //if let Some(ar) = any.downcast_mut::<&[u8]>() {
                 if let Some(ar) = any.downcast_ref::<Vec<u8>>() {
-                    //let array : &mut &[u8] = &ar;
-                    //self.read(array);
-                    //self.read(&mut *ar);
-                    //self.read(&mut ar[..]);
                     let array = &ar[..];
                     self.read(array);
+                }
+                else if let Some(ar) = any.downcast_ref::<&[u8]>() {
+                    self.read(*ar);
                 }
                 else {
                     panic!("could not cast");
@@ -657,7 +655,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    fn get_or_load_mut_from_name(&mut self, res : &ResTT<T>) -> (usize, Option<&mut T>)
+    fn get_or_load_mut(&mut self, res : &ResTT<T>) -> (usize, Option<&mut T>)
     {
         match self.get_res_state(&res.name) {
             Test::None => {
@@ -706,7 +704,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    fn get_or_load_ref_from_name(&mut self, res : &ResTT<T>) -> (usize, Option<&T>)
+    fn get_or_load_ref(&mut self, res : &ResTT<T>) -> (usize, Option<&T>)
     {
         match self.get_res_state(&res.name) {
             Test::None => {
@@ -882,7 +880,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn get_handle_instant(&mut self, name : &str) -> ResTT<T>
     {
-        //panic!("CALLING REQUEST_USE_NO_PROC_NEW with name and no res,2");
+        println!("CALLING REQUEST_USE_NO_PROC_NEW with name and no res,2");
         let i = self.request_use_no_proc_new(name);
         ResTT::new_with_index(name, i)
     }
@@ -918,8 +916,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 entry.insert(index);
 
                 let mut m : T = Create::create(&res.name);
-                //m.init_orig(&res.origin);
-                m.inittt();
+                m.init_orig(&res.origin);
                 let s = State::Using(m);
                 self.loaded.push(s);
                 index
@@ -1142,7 +1139,7 @@ pub fn resource_get_ref<'a, T:'static+Create+Send+Sync>(
         manager.get_ref(i)
     }
     else {
-        let (i, r) = manager.get_or_load_ref_from_name(res);
+        let (i, r) = manager.get_or_load_ref(res);
         res.resource.set(Some(i));
         r
     }
@@ -1161,7 +1158,7 @@ pub fn resource_get_mut<'a, T:'static+Create+Send+Sync>(
         manager.get_mut(i)
     }
     else {
-        let (i, r) = manager.get_or_load_mut_from_name(res);
+        let (i, r) = manager.get_or_load_mut(res);
         res.resource.set(Some(i));
         r
     }
