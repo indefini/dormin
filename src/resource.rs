@@ -126,7 +126,7 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
             i
         }
         else {
-            let i = rm.request_use_no_proc_new(self.name.as_ref());
+            let i = rm.request_use_no_proc_new_from_res(self);
             println!("warning !!!! this file gets requested everytime : {}", self.name);
             self.resource.set(Some(i));
             i
@@ -206,7 +206,7 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
             Some(manager.get_ref_instant(i))
         }
         else {
-            let i = manager.request_use_no_proc_new(&self.name);
+            let i = manager.request_use_no_proc_new_from_res(self);
             self.resource.set(Some(i));
             Some(manager.get_ref_instant(i))
         }
@@ -221,7 +221,7 @@ impl<T:Create+Send+Sync+'static> ResTT<T>
     {
         if self.instance.is_none() {
             let mut mt : T = Create::create(self.name.as_ref());
-            mt.inittt();
+            mt.init_orig(&self.origin);
             self.instance = Some(mt);
         }
 
@@ -337,15 +337,12 @@ impl<T:fmt::Debug> fmt::Debug for ResTT<T>
 pub trait Create
 {
     fn create(name : &str) -> Self;
-    //fn create2(res : &Any) -> Option<Self>
-    fn create2(orig : &Origin) -> Self where Self: core::marker::Sized
-    {
-        match *orig {
-            Origin::File(ref s) => Create::create(s),
-            _ => unimplemented!()
-        }
-    }
     fn inittt(&mut self);
+    fn init_orig(&mut self, orig : &Origin)
+    {
+        //unimplemented!();
+        self.inittt();
+    }
 }
 
 impl Create for mesh::Mesh
@@ -355,17 +352,46 @@ impl Create for mesh::Mesh
         mesh::Mesh::new_from_file(name)
     }
 
-    fn create2(orig : &Origin) -> mesh::Mesh
-    {
-        match *orig {
-            Origin::File(ref s) => mesh::Mesh::new_from_file(s),
-            _ => unimplemented!()
-        }
-    }
-
     fn inittt(&mut self)
     {
         self.file_read();
+    }
+
+    fn init_orig(&mut self, orig : &Origin)
+    {
+        match *orig {
+            Origin::File(ref s) => self.file_read(),
+            Origin::AnyStaticRef(ref any) => {
+                if let Some(ar) = any.downcast_ref::<&[u8]>() {
+                    //let array : &mut &[u8] = ar;
+                    //let array : &mut &[u8] = ar;
+                    //self.read(array);
+                    self.read(*ar);
+                }
+                else {
+                    panic!("could not cast to &[u8]");
+                 unimplemented!()
+                }
+            },
+            Origin::AnyBox(ref any) => {
+                //if let Some(ar) = any.downcast_mut::<&[u8]>() {
+                if let Some(ar) = any.downcast_ref::<Vec<u8>>() {
+                    //let array : &mut &[u8] = &ar;
+                    //self.read(array);
+                    //self.read(&mut *ar);
+                    //self.read(&mut ar[..]);
+                    let array = &ar[..];
+                    self.read(array);
+                }
+                else {
+                    panic!("could not cast");
+                 unimplemented!()
+                }
+            }
+            _ =>
+                //unimplemented!()
+                self.file_read(),
+        }
     }
 }
 
@@ -631,15 +657,30 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn get_or_load_mut_from_name(&mut self, name : &str) -> (usize, Option<&mut T>)
+    fn get_or_load_mut_from_name(&mut self, res : &ResTT<T>) -> (usize, Option<&mut T>)
     {
-        match self.get_res_state(name) {
+        match self.get_res_state(&res.name) {
             Test::None => {
                 let index = self.loaded.len();
-                let key = String::from(name);
+                let key = res.name.clone();
                 self.map.insert(key, index);
-                self.load(name);
-                (index, None)
+
+                match res.origin {
+                    Origin::AnyBox(ref a) => {
+                        let mut m : T = Create::create(&res.name);
+                        m.init_orig(&res.origin);
+                        self.loaded.push(State::Using(m));
+                        let li = &mut self.loaded[index];
+                        match *li {
+                            State::Using(ref mut u) => (index, Some(u)),
+                            _ => (index, None)
+                        }
+                    },
+                    _ => {
+                        self.load(res);
+                        (index, None)
+                    }
+                }
             },
             Test::Loading(i) => {
                 let li = &mut self.loaded[i];
@@ -665,15 +706,30 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
         }
     }
 
-    pub fn get_or_load_ref_from_name(&mut self, name : &str) -> (usize, Option<&T>)
+    fn get_or_load_ref_from_name(&mut self, res : &ResTT<T>) -> (usize, Option<&T>)
     {
-        match self.get_res_state(name) {
+        match self.get_res_state(&res.name) {
             Test::None => {
                 let index = self.loaded.len();
-                let key = String::from(name);
+                let key = res.name.clone();
                 self.map.insert(key, index);
-                self.load(name);
-                (index, None)
+
+                match res.origin {
+                    Origin::AnyBox(ref a) => {
+                        let mut m : T = Create::create(&res.name);
+                        m.init_orig(&res.origin);
+                        self.loaded.push(State::Using(m));
+                        let li = &self.loaded[index];
+                        match *li {
+                            State::Using(ref u) => (index, Some(u)),
+                            _ => (index, None)
+                        }
+                    },
+                    _ => {
+                        self.load(res);
+                        (index, None)
+                    }
+                }
             },
             Test::Loading(i) => {
                 let li = &mut self.loaded[i];
@@ -690,7 +746,7 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 }
             },
             Test::Other(i) => {
-                let li = &mut self.loaded[i];
+                let li = &self.loaded[i];
                 match *li {
                     State::Using(ref u) => (i, Some(u)),
                     _ => (i, None)
@@ -700,11 +756,12 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
     }
 
 
-    fn load(&mut self, name : &str)
+    fn load(&mut self, res : &ResTT<T>)
     {
-        let s = String::from(name);
-
+        let s = res.name.clone();
         let (tx, rx) = channel::<T>();
+
+
         let guard = thread::spawn(move || {
             let mut m : T = Create::create(s.as_ref());
             m.inittt();
@@ -816,12 +873,16 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn request_use_no_proc_tt(&mut self, name : &str) -> ResTT<T>
     {
-        let i = self.request_use_no_proc_new(name);
+        //let i = self.request_use_no_proc_new(name);
+        println!("TODO remove this function. create restt 2 times is dumb, FIX FIX FIX, this code was just to make it compile");
+        let res = ResTT::new(name);
+        let i = self.request_use_no_proc_new_from_res(&res);
         ResTT::new_with_index(name, i)
     }
 
     pub fn get_handle_instant(&mut self, name : &str) -> ResTT<T>
     {
+        //panic!("CALLING REQUEST_USE_NO_PROC_NEW with name and no res,2");
         let i = self.request_use_no_proc_new(name);
         ResTT::new_with_index(name, i)
     }
@@ -837,6 +898,27 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
                 entry.insert(index);
 
                 let mut m : T = Create::create(name);
+                m.inittt();
+                let s = State::Using(m);
+                self.loaded.push(s);
+                index
+            }
+            Occupied(entry) => {
+                *entry.get()
+            },
+        }
+    }
+
+    pub fn request_use_no_proc_new_from_res(&mut self, res : &ResTT<T>) -> usize
+    {
+        println!("TODO check if res is not already loaded etc, because this was created just to replace request_use_no_proc_new ");
+        match self.map.entry(res.name.clone()) {
+            Vacant(entry) => {
+                let index = self.loaded.len();
+                entry.insert(index);
+
+                let mut m : T = Create::create(&res.name);
+                //m.init_orig(&res.origin);
                 m.inittt();
                 let s = State::Using(m);
                 self.loaded.push(s);
@@ -987,7 +1069,10 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 
     pub fn get_or_create(&mut self, name : &str) -> &mut T
     {
-        let index = self.request_use_no_proc_new(name);
+        println!("TODO do not create resTT, it is useless, same as other dumb message");
+        let res = ResTT::new(name);
+        let index = self.request_use_no_proc_new_from_res(&res);
+        //let index = self.request_use_no_proc_new(name);
         self.get_mut_or_panic(index)
     }
 
@@ -996,6 +1081,8 @@ impl<T:'static+Create+Sync+Send> ResourceManager<T> {
 impl<T:'static+Clone+Create+Sync+Send> ResourceManager<T> {
     pub fn request_use_no_proc_tt_instance(&mut self, name : &str) -> ResTT<T>
     {
+        //panic!("CALLING REQUEST_USE_NO_PROC_NEW with name and no res,4");
+        println!("TODO dont request by name");
         let i = self.request_use_no_proc_new(name);
         let mut t = ResTT::new_with_index(name, i);
         t.create_instance_with_manager(self);
@@ -1055,7 +1142,7 @@ pub fn resource_get_ref<'a, T:'static+Create+Send+Sync>(
         manager.get_ref(i)
     }
     else {
-        let (i, r) = manager.get_or_load_ref_from_name(res.name.as_ref());
+        let (i, r) = manager.get_or_load_ref_from_name(res);
         res.resource.set(Some(i));
         r
     }
@@ -1074,7 +1161,7 @@ pub fn resource_get_mut<'a, T:'static+Create+Send+Sync>(
         manager.get_mut(i)
     }
     else {
-        let (i, r) = manager.get_or_load_mut_from_name(res.name.as_ref());
+        let (i, r) = manager.get_or_load_mut_from_name(res);
         res.resource.set(Some(i));
         r
     }

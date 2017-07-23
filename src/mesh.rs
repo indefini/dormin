@@ -222,13 +222,6 @@ pub struct Weight
     pub weight : f32
 }
 
-pub enum Origin
-{
-    File(String),
-    Data(Box<[u8]>),
-    DataRef(&'static [u8])
-}
-
 #[derive(Clone)]
 pub struct Mesh
 {
@@ -294,13 +287,17 @@ impl Mesh
             return;
         }
 
+        let mut file =
+        {
         let path : &Path = self.name.as_ref();
-        let mut file = match File::open(path) {
+        //let mut file = match File::open(path) {
+        match File::open(path) {
             Ok(f) => {f},
             Err(e) => {
                 println!("Error reading file '{}'. Error: {}", self.name, e);
                 return;
             }
+        }
         };
 
         match file.metadata() {
@@ -315,6 +312,11 @@ impl Mesh
             }
         }
 
+        self.read(&mut file);
+    }
+
+    pub fn read<T : Read>(&mut self, mut file : T)
+    {
        {
            let typelen = file.read_u16::<LittleEndian>().unwrap();
            println!("number : {} ", typelen);
@@ -459,6 +461,7 @@ impl Mesh
            if group_count > 0 {
                for g in 0..group_count {
                    //TODO just this name is used
+                   //let group_name = read_string(&mut file);
                    let group_name = read_string(&mut file);
                    let weight_count = file.read_u16::<LittleEndian>().unwrap();
                    println!("group name : {}, weight count : {} ", group_name, weight_count);
@@ -796,7 +799,8 @@ impl resource::ResourceT for Mesh
     }
 }
 
-pub fn read_string(file: &mut File ) -> String
+//pub fn read_string(file: &mut Read) -> String
+pub fn read_string<T:Read>(file: &mut T) -> String
 {
     let typelen = file.read_u16::<LittleEndian>().unwrap();
     println!("number : {} ", typelen);
