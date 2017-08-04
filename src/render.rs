@@ -270,8 +270,11 @@ impl RenderPass
 
             draw_mesh(mesh_render);
         }
+        else {
+            not_loaded += 1;
+        }
 
-        return not_loaded;
+        not_loaded
     }
 }
 
