@@ -140,21 +140,21 @@ impl CameraPass
     }
 }
 
-pub struct RenderPass
+pub struct RenderPass<Id:Hash+Clone+Eq>
 {
     pub name : String,
     //pub shader : Arc<RwLock<shader::Shader>>,
     pub shader : ResTT<shader::Shader>,
     //uuid is the camera id
-    pub passes : HashMap<uuid::Uuid, Box<CameraPass>>,
+    pub passes : HashMap<Id, Box<CameraPass>>,
 }
 
-impl RenderPass
+impl<Id:Hash+Eq+Clone> RenderPass<Id>
 {
     pub fn new(
         shader : ResTT<shader::Shader>
         )
-        -> RenderPass
+        -> RenderPass<Id>
     {
         RenderPass {
                   name : String::from("passtest"),
@@ -278,12 +278,12 @@ impl RenderPass
     }
 }
 
-pub fn get_pass_from_mesh_render<'a>(
+pub fn get_pass_from_mesh_render<'a, Id:Hash+Eq+Clone>(
     mr : &mesh_render::MeshRender,
-    passes : &'a mut HashMap<String, Box<RenderPass>>, 
+    passes : &'a mut HashMap<String, Box<RenderPass<Id>>>, 
     material_manager : &mut resource::ResourceManager<material::Material>,
     shader_manager : &mut resource::ResourceManager<shader::Shader>,
-    camera : &CameraIdMat,
+    camera : &CameraIdMat<Id>,
     load : Arc<Mutex<usize>>
     ) -> Option<&'a mut CameraPass>
 {
@@ -742,16 +742,17 @@ fn draw_mesh(shader : &shader::Shader, mesh : &mesh::Mesh)
     object_draw_mesh(mesh, vertex_data_count);
 }
 
-pub struct CameraIdMat
+use std::hash::Hash;
+pub struct CameraIdMat<Id:Hash+Clone>
 {
-    pub id : uuid::Uuid,
+    pub id : Id,
     pub orientation : transform::Orientation,
     pub matrix : matrix::Matrix4
 }
 
-impl CameraIdMat {
+impl CameraIdMat<uuid::Uuid> {
     
-    pub fn from_transform_camera(camera : &TransformCamera) -> CameraIdMat
+    pub fn from_transform_camera(camera : &TransformCamera) -> CameraIdMat<uuid::Uuid>
     {
         let local = camera.transform.compute_return_local_matrix();
         let per = camera.get_perspective();
