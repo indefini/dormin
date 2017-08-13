@@ -240,7 +240,9 @@ pub fn ray_triangle(r : &geometry::Ray, t : &geometry::Triangle, min : f64) -> I
 
 pub fn intersection_ray_aabox(ray : &geometry::Ray, abox : &geometry::AABox) -> IntersectionRay
 {
+    //TODO normal
   let mut out = IntersectionRay::new();
+  out.inside = true;
   let mut xt;
   let mut xn = 0f64;
 
@@ -316,6 +318,9 @@ pub fn intersection_ray_aabox(ray : &geometry::Ray, abox : &geometry::AABox) -> 
 
   if out.inside {
       out.hit = true;
+      //TODO
+      //out.normal = -ray.direction
+      //out.normal.normalize()
       return out;
   }
 
@@ -355,20 +360,25 @@ pub fn intersection_ray_aabox(ray : &geometry::Ray, abox : &geometry::AABox) -> 
       Plane::XZ => { //xz plane
           let x = ray.start.x + ray.direction.x*t;
           if x < abox.min.x - EPSILON || x > abox.max.x + EPSILON { 
-              out.inside = false; return out; }
+              out.inside = false;
+              return out;
+          }
           let z = ray.start.z + ray.direction.z*t;
           if z < abox.min.z - EPSILON || z > abox.max.z + EPSILON {
-              out.inside = false; return out; }
+              out.inside = false;
+              return out; }
 
           out.normal.y = yn;
       },
       Plane::XY => {
           let x = ray.start.x + ray.direction.x*t;
           if x < abox.min.x - EPSILON || x > abox.max.x + EPSILON {
-              out.inside = false; return out; }
+              out.inside = false;
+              return out; }
           let y = ray.start.y + ray.direction.y*t;
           if y < abox.min.y - EPSILON || y > abox.max.y + EPSILON { 
-              out.inside = false; return out; }
+              out.inside = false;
+              return out; }
 
           out.normal.y = zn;
       },

@@ -241,21 +241,24 @@ impl<Id:Hash+Eq+Clone> RenderPass<Id>
         };
 
         not_loaded = init_material(mesh_render);
+        if not_loaded > 0 { println!("not loaded {}, init material", not_loaded); }
 
-        let init_mesh_render = |mr : &mesh_render::MeshRender|  -> (bool, usize)
+        let init_mesh_render = |mr : &mesh_render::MeshRender|  -> ((bool, usize), bool)
         {
             let mesh_manager = &mut *resource.mesh_manager.borrow_mut();
 
-            let debug = mr.mesh.name.clone();
-            if let Some(m) = resource::resource_get_ref(mesh_manager, &mr.mesh) {
-                init_mesh(m, shader)
+            if let Some(ref m) = mr.mesh.instance {
+               (init_mesh(m, shader), true)
+            }
+            else if let Some(m) = resource::resource_get_ref(mesh_manager, &mr.mesh) {
+                (init_mesh(m, shader), false)
             }
             else {
-                (false, 0usize)
+                ((false, 0usize), false)
             }
         };
 
-        let (can_render, vertex_data_count) = init_mesh_render(mesh_render);
+        let ((can_render, vertex_data_count), instance) = init_mesh_render(mesh_render);
 
         if can_render {
             let object_mat_world = matrix * world_matrix ;
@@ -270,8 +273,12 @@ impl<Id:Hash+Eq+Clone> RenderPass<Id>
 
             draw_mesh(mesh_render);
         }
+        else if instance {
+            println!("TODO instance");
+        }
         else {
             not_loaded += 1;
+            if not_loaded > 0 { println!("not loaded {}, cannot render : {:?}", not_loaded, mesh_render); }
         }
 
         not_loaded
@@ -469,8 +476,8 @@ fn init_mesh(
                 continue;
             },
             None => {
-                //println!("while sending attributes, this mesh does 
-                //not have the '{}' buffer, not rendering", name);
+                println!("while sending attributes, this mesh does 
+                not have the '{}' buffer, not rendering", name);
                 can_render = false;
                 break;
             }
